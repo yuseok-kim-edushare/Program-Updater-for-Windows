@@ -154,25 +154,38 @@ namespace ProgramUpdater.Services
 
         private async Task BackupAndReplace(FileConfiguration file)
         {
-            if (File.Exists(file.CurrentPath))
+            try
             {
-                // Create backup directory if it doesn't exist
-                var backupDir = Path.GetDirectoryName(file.BackupPath);
-                if (!Directory.Exists(backupDir))
+                if (File.Exists(file.CurrentPath))
                 {
-                    Directory.CreateDirectory(backupDir);
+                    // Create backup directory if it doesn't exist
+                    var backupDir = Path.GetDirectoryName(file.BackupPath);
+                    if (!string.IsNullOrEmpty(backupDir))
+                    {
+                        Directory.CreateDirectory(backupDir);
+                    }
+
+                    // Backup existing file
+                    if (File.Exists(file.BackupPath))
+                    {
+                        File.Delete(file.BackupPath);
+                    }
+                    await Task.Run(() => File.Move(file.CurrentPath, file.BackupPath));
                 }
 
-                // Backup existing file
-                if (File.Exists(file.BackupPath))
-                {
-                    File.Delete(file.BackupPath);
-                }
-                File.Move(file.CurrentPath, file.BackupPath);
+                // Move new file to destination
+                await Task.Run(() => File.Move(file.NewPath, file.CurrentPath));
             }
-
-            // Move new file to destination
-            File.Move(file.NewPath, file.CurrentPath);
+            catch (IOException ex)
+            {
+                _logCallback($"Error during file backup/replace: {ex.Message}", LogLevel.Error);
+                throw;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logCallback($"Access denied during file backup/replace: {ex.Message}", LogLevel.Error);
+                throw;
+            }
         }
 
         private bool IsProcessRunning(string exePath)
