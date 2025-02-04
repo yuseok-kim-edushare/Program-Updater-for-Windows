@@ -7,7 +7,16 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationDefaultFont>Calibri, 11pt, style=regular</ApplicationDefaultFont>
+    <ApplicationDefaultFont>Calibri, 10pt, style=regular</ApplicationDefaultFont>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Company>Your Company Name</Company>
+    <Product>Updater</Product>
+    <Description>Application Updater Tool</Description>
+    <Copyright>Copyright © 2024</Copyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

@@ -1,0 +1,37 @@
+
+name: CI tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.sln*', '**/*.csproj*') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+     
+    - name: Restore NuGet packages
+      run: |
+        nuget restore updater.csproj -ConfigFile nuget.config
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Build solution for testing
+      run: |
+        dotnet build updater.csproj --configuration Debug
+
+    ## Todo: Create Test code and test running
