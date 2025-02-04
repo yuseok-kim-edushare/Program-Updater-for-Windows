@@ -215,7 +215,7 @@ namespace ProgramUpdater
                 {
                     LogMessage("Update completed successfully", LogLevel.Success);
                     await Task.Delay(3000); // Give user time to read the success message
-                    this.Close();
+                    Application.Exit();
                 }
                 else if (isCancellationRequested)
                 {
