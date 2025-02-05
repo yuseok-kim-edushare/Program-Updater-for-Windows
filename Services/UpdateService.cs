@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Net;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Diagnostics;
@@ -102,34 +103,85 @@ namespace ProgramUpdater.Services
             return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
         }
 
-        private async Task DownloadFile(string url, string destination)
+private async Task DownloadFile(string url, string destination)
+{
+    var uri = new Uri(url);
+    if (uri.Scheme == Uri.UriSchemeFtp)
+    {
+        await DownloadFileViaFtp(uri, destination);
+    }
+    else
+    {
+        await DownloadFileViaHttp(url, destination);
+    }
+}
+
+private async Task DownloadFileViaHttp(string url, string destination)
+{
+    var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+    response.EnsureSuccessStatusCode();
+
+    var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+    var buffer = new byte[8192];
+    var bytesRead = 0L;
+
+    using (var fileStream = File.Create(destination))
+    using (var downloadStream = await response.Content.ReadAsStreamAsync())
+    {
+        while (true)
         {
-            var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
+            var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
+            if (count == 0) break;
 
-            var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            var buffer = new byte[8192];
-            var bytesRead = 0L;
+            await fileStream.WriteAsync(buffer, 0, count);
+            bytesRead += count;
 
-            using (var fileStream = File.Create(destination))
-            using (var downloadStream = await response.Content.ReadAsStreamAsync())
+            if (totalBytes > 0)
             {
-                while (true)
-                {
-                    var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
-                    if (count == 0) break;
-
-                    await fileStream.WriteAsync(buffer, 0, count);
-                    bytesRead += count;
-
-                    if (totalBytes > 0)
-                    {
-                        var percentage = (int)((bytesRead * 100) / totalBytes);
-                        _progressCallback(percentage, $"Downloading... {percentage}%");
-                    }
-                }
+                var percentage = (int)((bytesRead * 100) / totalBytes);
+                _progressCallback(percentage, $"Downloading... {percentage}%");
             }
         }
+    }
+}
+
+private async Task DownloadFileViaFtp(Uri uri, string destination)
+{
+    var request = (FtpWebRequest)WebRequest.Create(uri);
+    request.Method = WebRequestMethods.Ftp.DownloadFile;
+    
+    // If credentials are needed, set them here
+    if (!string.IsNullOrEmpty(uri.UserInfo))
+    {
+        var credentials = uri.UserInfo.Split(':');
+        request.Credentials = new NetworkCredential(credentials[0], 
+            credentials.Length > 1 ? credentials[1] : string.Empty);
+    }
+
+    using (var response = (FtpWebResponse)await request.GetResponseAsync())
+    using (var responseStream = response.GetResponseStream())
+    using (var fileStream = File.Create(destination))
+    {
+        var buffer = new byte[8192];
+        var totalBytes = response.ContentLength;
+        var bytesRead = 0L;
+
+        while (true)
+        {
+            var count = await responseStream.ReadAsync(buffer, 0, buffer.Length);
+            if (count == 0) break;
+
+            await fileStream.WriteAsync(buffer, 0, count);
+            bytesRead += count;
+
+            if (totalBytes > 0)
+            {
+                var percentage = (int)((bytesRead * 100) / totalBytes);
+                _progressCallback(percentage, $"Downloading... {percentage}%");
+            }
+        }
+    }
+}
 
         private async Task<bool> VerifyFileHash(string filePath, string expectedHash)
         {
