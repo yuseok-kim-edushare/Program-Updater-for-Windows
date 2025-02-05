@@ -98,10 +98,10 @@ namespace ProgramUpdater
             cancelButton = new Button
             {
                 Text = "Cancel",
+                Font = new Font("Consolas", 9F),
                 Dock = DockStyle.Right,
                 Width = 100,
-                Height = 30,
-                Padding = new Padding(10),
+                Height = 45,
                 BackColor = Color.FromArgb(230, 230, 230)
             };
 
