@@ -307,6 +307,7 @@ namespace ProgramUpdater.Services
 
                 // Move new file to destination
                 await Task.Run(() => File.Move(file.NewPath, file.CurrentPath));
+                _logCallback($"{file.Name} installed successfully", LogLevel.Info);
             }
             catch (IOException ex)
             {
