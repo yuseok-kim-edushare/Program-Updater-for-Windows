@@ -203,46 +203,5 @@ namespace ProgramUpdater
             logTextBox.SelectionColor = logTextBox.ForeColor;
             logTextBox.ScrollToCaret();
         }
-
-        private async Task StartUpdateProcess()
-        {
-            try
-            {
-                updateService = new UpdateService(
-                    _configUrl,
-                    (message, level) => LogMessage(message, level),
-                    (progress, status) => UpdateProgress(progress, status));
-
-                LogMessage("Update process started", LogLevel.Info);
-                bool success = await updateService.PerformUpdate();
-
-                if (success)
-                {
-                    LogMessage("Update completed successfully", LogLevel.Success);
-                    await Task.Delay(3000); // Give user time to read the success message
-                    Application.Exit();
-                }
-                else if (isCancellationRequested)
-                {
-                    LogMessage("Update was cancelled by user", LogLevel.Warning);
-                    MessageBox.Show(
-                        "The update process was cancelled. The application may be in an inconsistent state.",
-                        "Update Cancelled",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
-                MessageBox.Show(
-                    "An error occurred during the update process. Check the log for details.",
-                    "Update Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
-        }
-
-
     }
 } 
