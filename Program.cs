@@ -32,7 +32,7 @@ namespace ProgramUpdater
 
         private static string GetConfigUrl(string[] args)
         {
-            const string defaultConfigUrl = "http://yourserver.com/path/to/update_config.json";
+            const string defaultConfigUrl = "https://raw.githubusercontent.com/yuseok-kim-edushare/Program-Updater-for-Windows/refs/heads/main/example.json";
             return args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) 
                 ? args[0] 
                 : defaultConfigUrl;
