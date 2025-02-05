@@ -127,16 +127,25 @@ namespace ProgramUpdater
         {
             try
             {
-                await StartUpdateProcess();
+                var configService = new ConfigurationService();
+                var config = await configService.GetConfiguration(_configUrl);
+                
+                updateService = new UpdateService((progress, status) =>
+                {
+                    this.InvokeIfRequired(() =>
+                    {
+                        progressBar.Value = progress;
+                        statusLabel.Text = status;
+                    });
+                });
+
+                await updateService.StartUpdate(config);
             }
             catch (Exception ex)
             {
-                LogMessage($"Error: {ex.Message}", LogLevel.Error);
-                MessageBox.Show(
-                    "An error occurred during the update process. Check the log for details.",
-                    "Update Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                LogError($"Update failed: {ex.Message}");
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
             }
         }
 
