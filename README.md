@@ -51,6 +51,12 @@ dotnet build --configuration Release
     ]
 }
 ```
+also path can be ftp
+```
+ftp://your-server.com/path/to/update_config.json
+or
+ftp://username:password@your-server.com/updates/app.exe
+```
 
 2. Run the updater:
 ```bash
