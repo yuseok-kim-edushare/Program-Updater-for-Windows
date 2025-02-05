@@ -57,6 +57,10 @@ ftp://your-server.com/path/to/update_config.json
 or
 ftp://username:password@your-server.com/updates/app.exe
 ```
+get file hash from windows powershell
+```PowerShell
+Get-FileHash -Path "C:\Program Files\YourApp\app.exe" -Algorithm SHA256
+```
 
 2. Run the updater:
 ```bash
