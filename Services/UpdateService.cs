@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using ProgramUpdater.Models;
+using ProgramUpdater.Extensions;
 
 namespace ProgramUpdater.Services
 {

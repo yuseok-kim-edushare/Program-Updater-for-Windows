@@ -1,9 +1,9 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using System.ComponentModel;
 using System.Threading.Tasks;
 using ProgramUpdater.Services;
+using ProgramUpdater.Extensions;
 
 namespace ProgramUpdater
 {
@@ -130,20 +130,24 @@ namespace ProgramUpdater
                 var configService = new ConfigurationService();
                 var config = await configService.GetConfiguration(_configUrl);
                 
-                updateService = new UpdateService((progress, status) =>
-                {
-                    this.InvokeIfRequired(() =>
+                updateService = new UpdateService(
+                    _configUrl,
+                    (message, level) => LogMessage(message, level),
+                    (progress, status) =>
                     {
-                        progressBar.Value = progress;
-                        statusLabel.Text = status;
-                    });
-                });
+                        this.InvokeIfRequired(() =>
+                        {
+                            progressBar.Value = progress;
+                            statusLabel.Text = status;
+                        });
+                    }
+                );
 
-                await updateService.StartUpdate(config);
+                await updateService.PerformUpdate();
             }
             catch (Exception ex)
             {
-                LogError($"Update failed: {ex.Message}");
+                LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
             }
@@ -176,35 +180,27 @@ namespace ProgramUpdater
             statusLabel.Text = status;
         }
 
-        public void LogMessage(string message, LogLevel level = LogLevel.Info)
+        public void LogMessage(string message, LogLevel level)
         {
-            if (this.InvokeRequired)
+            if (logTextBox.InvokeRequired)
             {
-                this.Invoke(new Action(() => LogMessage(message, level)));
+                logTextBox.Invoke(new Action(() => LogMessage(message, level)));
                 return;
             }
 
-            Color textColor;
-            switch (level)
+            Color textColor = level switch
             {
-                case LogLevel.Error:
-                    textColor = Color.Red;
-                    break;
-                case LogLevel.Warning:
-                    textColor = Color.Orange;
-                    break;
-                case LogLevel.Success:
-                    textColor = Color.Green;
-                    break;
-                default:
-                    textColor = Color.Black;
-                    break;
-            }
+                LogLevel.Error => Color.Red,
+                LogLevel.Warning => Color.Orange,
+                LogLevel.Success => Color.Green,
+                _ => logTextBox.ForeColor
+            };
 
             logTextBox.SelectionStart = logTextBox.TextLength;
             logTextBox.SelectionLength = 0;
             logTextBox.SelectionColor = textColor;
-            logTextBox.AppendText($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+            logTextBox.AppendText($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}{Environment.NewLine}");
+            logTextBox.SelectionColor = logTextBox.ForeColor;
             logTextBox.ScrollToCaret();
         }
 
@@ -214,8 +210,8 @@ namespace ProgramUpdater
             {
                 updateService = new UpdateService(
                     _configUrl,
-                    LogMessage,
-                    UpdateProgress);
+                    (message, level) => LogMessage(message, level),
+                    (progress, status) => UpdateProgress(progress, status));
 
                 LogMessage("Update process started", LogLevel.Info);
                 bool success = await updateService.PerformUpdate();
@@ -246,13 +242,7 @@ namespace ProgramUpdater
                     MessageBoxIcon.Error);
             }
         }
-    }
 
-    public enum LogLevel
-    {
-        Info,
-        Warning,
-        Error,
-        Success
+
     }
 } 
