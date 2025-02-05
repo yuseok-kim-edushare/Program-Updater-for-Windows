@@ -123,14 +123,32 @@ namespace ProgramUpdater.Services
 
         private async Task DownloadFile(string url, string destination)
         {
-            var uri = new Uri(url);
-            if (uri.Scheme == Uri.UriSchemeFtp)
+            try
             {
-                await DownloadFileViaFtp(uri, destination);
+                var uri = new Uri(url);
+                if (uri.Scheme == Uri.UriSchemeFtp)
+                {
+                    await DownloadFileViaFtp(uri, destination);
+                }
+                else
+                {
+                    await DownloadFileViaHttp(url, destination);
+                }
             }
-            else
+            catch (HttpRequestException ex)
             {
-                await DownloadFileViaHttp(url, destination);
+                _logCallback($"HTTP download failed: {ex.Message}", LogLevel.Error);
+                throw new Exception($"Failed to download file from {url}: {ex.Message}", ex);
+            }
+            catch (WebException ex)
+            {
+                _logCallback($"Network error during download: {ex.Message}", LogLevel.Error);
+                throw new Exception($"Network error downloading from {url}: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logCallback($"Unexpected error during download: {ex.Message}", LogLevel.Error);
+                throw new Exception($"Failed to download file from {url}: {ex.Message}", ex);
             }
         }
 
@@ -143,10 +161,10 @@ namespace ProgramUpdater.Services
             var buffer = new byte[8192];
             var bytesRead = 0L;
 
-            using (var fileStream = File.Create(destination))
+            using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
             using (var downloadStream = await response.Content.ReadAsStreamAsync())
             {
-                while (true)
+                while (!_isCancellationRequested)
                 {
                     var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
                     if (count == 0) break;
@@ -160,6 +178,20 @@ namespace ProgramUpdater.Services
                         _progressCallback(percentage, $"Downloading... {percentage}%");
                     }
                 }
+
+                await fileStream.FlushAsync();
+
+                // Verify the download size if Content-Length was provided
+                if (totalBytes > 0 && bytesRead != totalBytes)
+                {
+                    throw new Exception($"Download incomplete. Expected {totalBytes} bytes but got {bytesRead} bytes.");
+                }
+
+                if (_isCancellationRequested)
+                {
+                    _logCallback("Download cancelled by user", LogLevel.Warning);
+                    throw new OperationCanceledException("Download cancelled by user");
+                }
             }
         }
 
@@ -167,26 +199,14 @@ namespace ProgramUpdater.Services
         {
             var request = (FtpWebRequest)WebRequest.Create(uri);
             request.Method = WebRequestMethods.Ftp.DownloadFile;
+            request.Timeout = 30000; // 30 second timeout
             
-            // Enable FTPS if the scheme is "ftps"
             if (uri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase))
             {
                 request.EnableSsl = true;
-                // Optional: Configure SSL/TLS settings
-                request.KeepAlive = false; // Recommended for FTPS
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-                
-                // Optional: Server certificate validation
-                ServicePointManager.ServerCertificateValidationCallback = 
-                    (sender, certificate, chain, sslPolicyErrors) =>
-                    {
-                        // You might want to implement proper certificate validation here
-                        // For now, we'll accept all certificates
-                        return true;
-                    };
+                request.KeepAlive = false;
             }
             
-            // If credentials are needed, set them here
             if (!string.IsNullOrEmpty(uri.UserInfo))
             {
                 var credentials = uri.UserInfo.Split(':');
@@ -200,13 +220,13 @@ namespace ProgramUpdater.Services
             {
                 using (var response = (FtpWebResponse)await request.GetResponseAsync())
                 using (var responseStream = response.GetResponseStream())
-                using (var fileStream = File.Create(destination))
+                using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
                     var buffer = new byte[8192];
                     var totalBytes = response.ContentLength;
                     var bytesRead = 0L;
 
-                    while (true)
+                    while (!_isCancellationRequested)
                     {
                         var count = await responseStream.ReadAsync(buffer, 0, buffer.Length);
                         if (count == 0) break;
@@ -220,11 +240,26 @@ namespace ProgramUpdater.Services
                             _progressCallback(percentage, $"Downloading... {percentage}%");
                         }
                     }
+
+                    await fileStream.FlushAsync();
+
+                    // Verify the download size
+                    if (totalBytes > 0 && bytesRead != totalBytes)
+                    {
+                        throw new Exception($"FTP download incomplete. Expected {totalBytes} bytes but got {bytesRead} bytes.");
+                    }
+
+                    if (_isCancellationRequested)
+                    {
+                        _logCallback("FTP download cancelled by user", LogLevel.Warning);
+                        throw new OperationCanceledException("Download cancelled by user");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception($"FTPS download failed: {ex.Message}", ex);
+                _logCallback($"FTP download failed: {ex.Message}", LogLevel.Error);
+                throw new Exception($"FTP download failed: {ex.Message}", ex);
             }
         }
 
