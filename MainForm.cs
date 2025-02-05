@@ -16,7 +16,6 @@ namespace ProgramUpdater
         private ProgressBar progressBar;
         private Button cancelButton;
         private RichTextBox logTextBox;
-        private bool isCancellationRequested;
         private UpdateService updateService;
 
         public MainForm(string configUrl)
@@ -161,7 +160,6 @@ namespace ProgramUpdater
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                isCancellationRequested = true;
                 updateService?.RequestCancellation();
                 cancelButton.Enabled = false;
                 statusLabel.Text = "Cancelling...";
