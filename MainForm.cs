@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Threading.Tasks;
 using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
 
