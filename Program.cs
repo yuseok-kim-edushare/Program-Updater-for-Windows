@@ -48,9 +48,10 @@ namespace ProgramUpdater
             if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uriResult) || 
                 !(uriResult.Scheme == Uri.UriSchemeHttp || 
                   uriResult.Scheme == Uri.UriSchemeHttps || 
-                  uriResult.Scheme == Uri.UriSchemeFtp))
+                  uriResult.Scheme == Uri.UriSchemeFtp ||
+                  uriResult.Scheme == "ftps"))
             {
-                throw new ArgumentException("Invalid configuration URL format. Supported schemes are HTTP, HTTPS, and FTP.");
+                throw new ArgumentException("Invalid configuration URL format. Supported schemes are HTTP, HTTPS, FTP, and FTPS.");
             }
         }
 

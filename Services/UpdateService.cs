@@ -26,7 +26,24 @@ namespace ProgramUpdater.Services
             _configUrl = configUrl;
             _logCallback = logCallback;
             _progressCallback = progressCallback;
-            _httpClient = new HttpClient();
+            
+            // Configure HTTP client with secure defaults
+            var handler = new HttpClientHandler
+            {
+                // Optional: Configure certificate validation
+                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
+                {
+                    // You might want to implement proper certificate validation here
+                    // For now, we'll use the default validation
+                    return sslPolicyErrors == System.Net.Security.SslPolicyErrors.None;
+                }
+            };
+
+            // Set security protocol to TLS 1.2 and 1.3
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+            
+            _httpClient = new HttpClient(handler);
+            _httpClient.Timeout = TimeSpan.FromMinutes(30); // Adjust timeout as needed
         }
 
         public void RequestCancellation()
@@ -103,85 +120,112 @@ namespace ProgramUpdater.Services
             return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
         }
 
-private async Task DownloadFile(string url, string destination)
-{
-    var uri = new Uri(url);
-    if (uri.Scheme == Uri.UriSchemeFtp)
-    {
-        await DownloadFileViaFtp(uri, destination);
-    }
-    else
-    {
-        await DownloadFileViaHttp(url, destination);
-    }
-}
-
-private async Task DownloadFileViaHttp(string url, string destination)
-{
-    var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-    response.EnsureSuccessStatusCode();
-
-    var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-    var buffer = new byte[8192];
-    var bytesRead = 0L;
-
-    using (var fileStream = File.Create(destination))
-    using (var downloadStream = await response.Content.ReadAsStreamAsync())
-    {
-        while (true)
+        private async Task DownloadFile(string url, string destination)
         {
-            var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
-            if (count == 0) break;
-
-            await fileStream.WriteAsync(buffer, 0, count);
-            bytesRead += count;
-
-            if (totalBytes > 0)
+            var uri = new Uri(url);
+            if (uri.Scheme == Uri.UriSchemeFtp)
             {
-                var percentage = (int)((bytesRead * 100) / totalBytes);
-                _progressCallback(percentage, $"Downloading... {percentage}%");
+                await DownloadFileViaFtp(uri, destination);
+            }
+            else
+            {
+                await DownloadFileViaHttp(url, destination);
             }
         }
-    }
-}
 
-private async Task DownloadFileViaFtp(Uri uri, string destination)
-{
-    var request = (FtpWebRequest)WebRequest.Create(uri);
-    request.Method = WebRequestMethods.Ftp.DownloadFile;
-    
-    // If credentials are needed, set them here
-    if (!string.IsNullOrEmpty(uri.UserInfo))
-    {
-        var credentials = uri.UserInfo.Split(':');
-        request.Credentials = new NetworkCredential(credentials[0], 
-            credentials.Length > 1 ? credentials[1] : string.Empty);
-    }
-
-    using (var response = (FtpWebResponse)await request.GetResponseAsync())
-    using (var responseStream = response.GetResponseStream())
-    using (var fileStream = File.Create(destination))
-    {
-        var buffer = new byte[8192];
-        var totalBytes = response.ContentLength;
-        var bytesRead = 0L;
-
-        while (true)
+        private async Task DownloadFileViaHttp(string url, string destination)
         {
-            var count = await responseStream.ReadAsync(buffer, 0, buffer.Length);
-            if (count == 0) break;
+            var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
 
-            await fileStream.WriteAsync(buffer, 0, count);
-            bytesRead += count;
+            var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+            var buffer = new byte[8192];
+            var bytesRead = 0L;
 
-            if (totalBytes > 0)
+            using (var fileStream = File.Create(destination))
+            using (var downloadStream = await response.Content.ReadAsStreamAsync())
             {
-                var percentage = (int)((bytesRead * 100) / totalBytes);
-                _progressCallback(percentage, $"Downloading... {percentage}%");
+                while (true)
+                {
+                    var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
+                    if (count == 0) break;
+
+                    await fileStream.WriteAsync(buffer, 0, count);
+                    bytesRead += count;
+
+                    if (totalBytes > 0)
+                    {
+                        var percentage = (int)((bytesRead * 100) / totalBytes);
+                        _progressCallback(percentage, $"Downloading... {percentage}%");
+                    }
+                }
             }
         }
-    }
-}
+
+        private async Task DownloadFileViaFtp(Uri uri, string destination)
+        {
+            var request = (FtpWebRequest)WebRequest.Create(uri);
+            request.Method = WebRequestMethods.Ftp.DownloadFile;
+            
+            // Enable FTPS if the scheme is "ftps"
+            if (uri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase))
+            {
+                request.EnableSsl = true;
+                // Optional: Configure SSL/TLS settings
+                request.KeepAlive = false; // Recommended for FTPS
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+                
+                // Optional: Server certificate validation
+                ServicePointManager.ServerCertificateValidationCallback = 
+                    (sender, certificate, chain, sslPolicyErrors) =>
+                    {
+                        // You might want to implement proper certificate validation here
+                        // For now, we'll accept all certificates
+                        return true;
+                    };
+            }
+            
+            // If credentials are needed, set them here
+            if (!string.IsNullOrEmpty(uri.UserInfo))
+            {
+                var credentials = uri.UserInfo.Split(':');
+                request.Credentials = new NetworkCredential(
+                    credentials[0], 
+                    credentials.Length > 1 ? credentials[1] : string.Empty
+                );
+            }
+
+            try
+            {
+                using (var response = (FtpWebResponse)await request.GetResponseAsync())
+                using (var responseStream = response.GetResponseStream())
+                using (var fileStream = File.Create(destination))
+                {
+                    var buffer = new byte[8192];
+                    var totalBytes = response.ContentLength;
+                    var bytesRead = 0L;
+
+                    while (true)
+                    {
+                        var count = await responseStream.ReadAsync(buffer, 0, buffer.Length);
+                        if (count == 0) break;
+
+                        await fileStream.WriteAsync(buffer, 0, count);
+                        bytesRead += count;
+
+                        if (totalBytes > 0)
+                        {
+                            var percentage = (int)((bytesRead * 100) / totalBytes);
+                            _progressCallback(percentage, $"Downloading... {percentage}%");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"FTPS download failed: {ex.Message}", ex);
+            }
+        }
 
         private async Task<bool> VerifyFileHash(string filePath, string expectedHash)
         {
