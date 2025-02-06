@@ -101,8 +101,7 @@ namespace ProgramUpdater.Services
             }
             catch (Exception ex)
             {
-                _logCallback($"Update failed: {ex.Message}", LogLevel.Error);
-                throw;
+                throw ex;
             }
         }
 

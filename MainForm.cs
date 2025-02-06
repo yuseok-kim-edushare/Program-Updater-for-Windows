@@ -138,6 +138,7 @@ namespace ProgramUpdater
                 {
                     ChangeToCancelToCloseButton();
                 }
+                
             }
             catch (Exception ex)
             {
@@ -151,6 +152,7 @@ namespace ProgramUpdater
                     LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
                     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+                ChangeToCancelToCloseButton();
             }
         }
 
