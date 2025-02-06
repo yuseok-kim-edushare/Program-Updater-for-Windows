@@ -72,9 +72,12 @@ jobs:
     - name: Explicit Version Order apply to create release
       run: |
         $latestCommitMessage = (git log -1 --pretty=%B)
-        if ($latestCommitMessage -match "Update Version to (\d+\.\d+\.\d+)") {
-          $version = $matches[1]
-          echo "new_release=$version" >> $env:GITHUB_ENV
+        foreach ($line in $latestCommitMessage) {
+          if ($line -match "Update Version to (\d+\.\d+\.\d+)") {
+            $messageParts = $line -split ' '
+            $lastPart = $messageParts[-1]
+            echo "new_release=$version" >> $env:GITHUB_ENV
+          }
         }
 
     - name: Create Release
