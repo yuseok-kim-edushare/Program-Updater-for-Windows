@@ -132,7 +132,11 @@ namespace ProgramUpdater
             try
             {
                 var config = await _configService.GetConfiguration(_configUrl);
-                await _updateService.PerformUpdate();
+                bool updateSuccess = await _updateService.PerformUpdate();
+                if (updateSuccess)
+                {
+                    ChangeToCancelToCloseButton();
+                }
             }
             catch (Exception ex)
             {
@@ -140,6 +144,19 @@ namespace ProgramUpdater
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
             }
+        }
+
+        private void ChangeToCancelToCloseButton()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ChangeToCancelToCloseButton));
+                return;
+            }
+
+            cancelButton.Text = "Close";
+            cancelButton.Click -= CancelButton_Click;
+            cancelButton.Click += (s, e) => Close();
         }
 
         private void CancelButton_Click(object sender, EventArgs e)
