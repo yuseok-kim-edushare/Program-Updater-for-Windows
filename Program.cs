@@ -55,7 +55,11 @@ namespace ProgramUpdater
             services.AddHttpClient();
             
             // Register services
-            services.AddSingleton<ConfigurationService>();
+            services.AddSingleton(serviceProvider =>
+            {
+                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                return new ConfigurationService(httpClientFactory);
+            });
             
             // Register UpdateService with its dependencies
             services.AddSingleton(serviceProvider =>
@@ -74,8 +78,7 @@ namespace ProgramUpdater
             {
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 var updateService = serviceProvider.GetRequiredService<UpdateService>();
-                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-                return new MainForm(configUrl, configService, updateService, httpClientFactory);
+                return new MainForm(configUrl, configService, updateService);
             });
         }
 

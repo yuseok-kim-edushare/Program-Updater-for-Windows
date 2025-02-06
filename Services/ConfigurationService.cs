@@ -11,19 +11,12 @@ namespace ProgramUpdater.Services
 {
     public class ConfigurationService : IDisposable
     {
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public ConfigurationService()
+        public ConfigurationService(IHttpClientFactory httpClientFactory)
         {
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
-                    sslPolicyErrors == System.Net.Security.SslPolicyErrors.None
-            };
-
+            _httpClientFactory = httpClientFactory;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-            
-            _httpClient = new HttpClient(handler);
         }
 
         public async Task<UpdateConfiguration> GetConfiguration(string configUrl)
@@ -52,8 +45,8 @@ namespace ProgramUpdater.Services
 
         private async Task<string> DownloadConfigViaHttp(Uri uri)
         {
-            var response = await _httpClient.GetStringAsync(uri);
-            return response;
+            using var client = _httpClientFactory.CreateClient();
+            return await client.GetStringAsync(uri);
         }
 
         private async Task<string> DownloadConfigViaFtp(Uri uri)
@@ -86,7 +79,7 @@ namespace ProgramUpdater.Services
 
         public void Dispose()
         {
-            _httpClient?.Dispose();
+            // Nothing to dispose since HttpClient is managed by IHttpClientFactory
         }
     }
 } 

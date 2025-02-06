@@ -19,14 +19,12 @@ namespace ProgramUpdater
         private RichTextBox logTextBox;
         private UpdateService _updateService;
         private readonly ConfigurationService _configService;
-        private readonly IHttpClientFactory _httpClientFactory;
 
-        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService, IHttpClientFactory httpClientFactory)
+        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService)
         {
             _configUrl = configUrl;
             _configService = configService;
             _updateService = updateService;
-            _httpClientFactory = httpClientFactory;
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
@@ -138,7 +136,7 @@ namespace ProgramUpdater
                 {
                     ChangeToCancelToCloseButton();
                 }
-                
+
             }
             catch (Exception ex)
             {
