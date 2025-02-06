@@ -32,8 +32,8 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: nuget restore -PackagesDirectory ${{ github.workspace }}\packages
-
+      run: nuget restore updater.csproj -ConfigFile nuget.config
+      
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
     
