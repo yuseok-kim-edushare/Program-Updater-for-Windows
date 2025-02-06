@@ -133,7 +133,7 @@ namespace ProgramUpdater
                 bool updateSuccess = await _updateService.PerformUpdate();
                 if (updateSuccess)
                 {
-                    ChangeToCancelToCloseButton();
+                    ChangeCancelButtonToClose();
                 }
             }
             catch (Exception ex)
@@ -147,15 +147,15 @@ namespace ProgramUpdater
                     LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
                     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                ChangeToCancelToCloseButton();
+                ChangeCancelButtonToClose();
             }
         }
 
-        private void ChangeToCancelToCloseButton()
+        private void ChangeCancelButtonToClose()
         {
             if (this.InvokeRequired)
             {
-                this.Invoke(new Action(ChangeToCancelToCloseButton));
+                this.Invoke(new Action(ChangeCancelButtonToClose));
                 return;
             }
 
