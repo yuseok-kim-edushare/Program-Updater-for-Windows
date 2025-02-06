@@ -11,40 +11,28 @@ using ProgramUpdater.Extensions;
 
 namespace ProgramUpdater.Services
 {
-    public class UpdateService
+    public class UpdateService : IDisposable
     {
         private readonly string _configUrl;
         private readonly Action<string, LogLevel> _logCallback;
         private readonly Action<int, string> _progressCallback;
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
         private bool _isCancellationRequested;
 
         public UpdateService(
             string configUrl,
             Action<string, LogLevel> logCallback,
-            Action<int, string> progressCallback)
+            Action<int, string> progressCallback,
+            IHttpClientFactory httpClientFactory)
         {
             _configUrl = configUrl;
             _logCallback = logCallback;
             _progressCallback = progressCallback;
+            _httpClientFactory = httpClientFactory;
             
-            // Configure HTTP client with secure defaults
-            var handler = new HttpClientHandler
-            {
-                // Optional: Configure certificate validation
-                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
-                {
-                    // You might want to implement proper certificate validation here
-                    // For now, we'll use the default validation
-                    return sslPolicyErrors == System.Net.Security.SslPolicyErrors.None;
-                }
-            };
-
             // Set security protocol to TLS 1.2 and 1.3
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
             
-            _httpClient = new HttpClient(handler);
-            _httpClient.Timeout = TimeSpan.FromMinutes(30); // Adjust timeout as needed
         }
 
         public void RequestCancellation()
@@ -117,16 +105,51 @@ namespace ProgramUpdater.Services
 
         private async Task<UpdateConfiguration> DownloadConfiguration()
         {
-            var jsonString = await _httpClient.GetStringAsync(_configUrl);
-            return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
+            var uri = new Uri(_configUrl);
+            if (uri.Scheme == Uri.UriSchemeHttp || 
+                  uri.Scheme == Uri.UriSchemeHttps)
+            {
+                using (var client = _httpClientFactory.CreateClient())
+                {
+                    var jsonString = await client.GetStringAsync(_configUrl);
+                    return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
+                }
+            }
+            else
+            {
+                var request = (FtpWebRequest)WebRequest.Create(uri);
+                request.Method = WebRequestMethods.Ftp.DownloadFile;
+                request.Timeout = 30000; // 30 second timeout
+                if (uri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase))
+                {
+                    request.EnableSsl = true;
+                    request.KeepAlive = false;
+                }
+                if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    var credentials = uri.UserInfo.Split(':');
+                    request.Credentials = new NetworkCredential(
+                        credentials[0],
+                        credentials.Length > 1 ? credentials[1] : string.Empty
+                    );
+                }
+                using (var response = (FtpWebResponse)await request.GetResponseAsync())
+                using (var responseStream = response.GetResponseStream())
+                using (var reader = new StreamReader(responseStream))
+                {
+                    var jsonString = await reader.ReadToEndAsync();
+                    return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
+                }
+            }
         }
+
 
         private async Task DownloadFile(string url, string destination)
         {
             try
             {
                 var uri = new Uri(url);
-                if (uri.Scheme == Uri.UriSchemeFtp)
+                if (uri.Scheme == Uri.UriSchemeFtp || uri.Scheme == "ftps")
                 {
                     await DownloadFileViaFtp(uri, destination);
                 }
@@ -154,32 +177,33 @@ namespace ProgramUpdater.Services
 
         private async Task DownloadFileViaHttp(string url, string destination)
         {
-            var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            var buffer = new byte[8192];
-            var bytesRead = 0L;
-
-            using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
-            using (var downloadStream = await response.Content.ReadAsStreamAsync())
+            using (var client = _httpClientFactory.CreateClient())
             {
-                while (!_isCancellationRequested)
+                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                var buffer = new byte[8192];
+                var bytesRead = 0L;
+
+                using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var downloadStream = await response.Content.ReadAsStreamAsync())
                 {
-                    var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
-                    if (count == 0) break;
-
-                    await fileStream.WriteAsync(buffer, 0, count);
-                    bytesRead += count;
-
-                    if (totalBytes > 0)
+                    while (!_isCancellationRequested)
                     {
-                        var percentage = (int)((bytesRead * 100) / totalBytes);
-                        _progressCallback(percentage, $"Downloading... {percentage}%");
+                        var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
+                        if (count == 0) break;
+
+                        await fileStream.WriteAsync(buffer, 0, count);
+                        bytesRead += count;
+
+                        if (totalBytes > 0)
+                        {
+                            var percentage = (int)((bytesRead * 100) / totalBytes);
+                            _progressCallback(percentage, $"Downloading... {percentage}%");
+                        }
                     }
                 }
-
-                await fileStream.FlushAsync();
 
                 // Verify the download size if Content-Length was provided
                 if (totalBytes > 0 && bytesRead != totalBytes)
@@ -346,6 +370,11 @@ namespace ProgramUpdater.Services
                 FileName = exePath,
                 UseShellExecute = true
             });
+        }
+
+        public void Dispose()
+        {
+            // Dispose of any resources here
         }
     }
 } 

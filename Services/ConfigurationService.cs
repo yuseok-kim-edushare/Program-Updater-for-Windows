@@ -9,7 +9,7 @@ using ProgramUpdater.Models;
 
 namespace ProgramUpdater.Services
 {
-    public class ConfigurationService
+    public class ConfigurationService : IDisposable
     {
         private readonly HttpClient _httpClient;
 

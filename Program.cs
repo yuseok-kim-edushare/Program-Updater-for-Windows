@@ -1,14 +1,23 @@
 using System;
 using System.Windows.Forms;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using ProgramUpdater.Services;
 
 namespace ProgramUpdater
 {
     static class Program
     {
+        private static IServiceProvider _serviceProvider;
+
         [STAThread]
         static void Main(string[] args)
         {
+            // Set up dependency injection
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+
+            _serviceProvider = services.BuildServiceProvider();
             // Set up global exception handling
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
@@ -21,12 +30,41 @@ namespace ProgramUpdater
 
             try
             {
-                ValidateConfigUrl(configUrl);
-                Application.Run(new MainForm(configUrl));
+                ValidateConfigUrl(configUrl);                
+                // Resolve MainForm from the service provider
+                var mainForm = _serviceProvider.GetRequiredService<MainForm>();
+                Application.Run(mainForm);
             }
             catch (Exception ex)
             {
                 HandleFatalError(ex);
+            }
+            finally
+            {
+                DisposeServices();
+            }
+        }
+
+        private static void ConfigureServices(IServiceCollection services)
+        {
+            // Register HttpClientFactory
+            services.AddHttpClient();
+
+            // Register other services, including MainForm
+            services.AddTransient<ConfigurationService>();
+            services.AddTransient<UpdateService>();
+            services.AddTransient<MainForm>(); // Register MainForm as transient
+        }
+
+        private static void DisposeServices()
+        {
+            if (_serviceProvider == null)
+            {
+                return;
+            }
+            if (_serviceProvider is IDisposable)
+            {
+                ((IDisposable)_serviceProvider).Dispose();
             }
         }
 

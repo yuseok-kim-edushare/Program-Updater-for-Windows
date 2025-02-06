@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
+using System.Net.Http;
 
 namespace ProgramUpdater
 {
@@ -15,11 +16,16 @@ namespace ProgramUpdater
         private ProgressBar progressBar;
         private Button cancelButton;
         private RichTextBox logTextBox;
-        private UpdateService updateService;
+        private UpdateService _updateService;
+        private readonly ConfigurationService _configService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public MainForm(string configUrl)
+        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService, IHttpClientFactory httpClientFactory)
         {
             _configUrl = configUrl;
+            _configService = configService;
+            _updateService = updateService;
+            _httpClientFactory = httpClientFactory;
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
@@ -125,10 +131,10 @@ namespace ProgramUpdater
         {
             try
             {
-                var configService = new ConfigurationService();
-                var config = await configService.GetConfiguration(_configUrl);
-                
-                updateService = new UpdateService(
+                var config = await _configService.GetConfiguration(_configUrl);
+
+                //You should inject the IHttpClientFactory into the UpdateService constructor
+                _updateService = new UpdateService(
                     _configUrl,
                     (message, level) => LogMessage(message, level),
                     (progress, status) =>
@@ -138,10 +144,11 @@ namespace ProgramUpdater
                             progressBar.Value = progress;
                             statusLabel.Text = status;
                         });
-                    }
+                    },
+                    _httpClientFactory
                 );
 
-                await updateService.PerformUpdate();
+                await _updateService.PerformUpdate();
             }
             catch (Exception ex)
             {
@@ -159,7 +166,7 @@ namespace ProgramUpdater
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                updateService?.RequestCancellation();
+                _updateService?.RequestCancellation();
                 cancelButton.Enabled = false;
                 statusLabel.Text = "Cancelling...";
             }
