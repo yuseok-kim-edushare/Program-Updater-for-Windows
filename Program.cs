@@ -46,8 +46,6 @@ namespace ProgramUpdater
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            configUrl = GetConfigUrl(args);
-
             try
             {
                 ValidateConfigUrl(configUrl);
@@ -77,6 +75,9 @@ namespace ProgramUpdater
             // Add options: ensures that the Options system is available to the HttpClientFactory.
             services.AddOptions();
 
+            // Register SettingsService
+            services.AddSingleton<SettingsService>();
+
             // Register IHttpClientFactory with a named client "UpdateClient"
             services.AddHttpClient("UpdateClient", client =>
             {
@@ -92,7 +93,6 @@ namespace ProgramUpdater
             });
 
             // Register ConfigurationService using a valid IHttpClientFactory instance.
-            // This will throw an exception immediately if IHttpClientFactory is not registered.
             services.AddSingleton(serviceProvider =>
             {
                 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
@@ -104,6 +104,8 @@ namespace ProgramUpdater
             {
                 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
+                var settingsService = serviceProvider.GetRequiredService<SettingsService>();
+                configUrl = settingsService.ConfigurationFilePath;
                 return new UpdateService(
                     configUrl,
                     (message, level) => LogMessage(message, level),
@@ -118,7 +120,8 @@ namespace ProgramUpdater
             {
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 var updateService = serviceProvider.GetRequiredService<UpdateService>();
-                return new MainForm(configService, updateService);
+                var settingsService = serviceProvider.GetRequiredService<SettingsService>();
+                return new MainForm(configService, updateService, settingsService);
             });
         }
 
@@ -133,14 +136,6 @@ namespace ProgramUpdater
             {
                 disposable.Dispose();
             }
-        }
-
-        private static string GetConfigUrl(string[] args)
-        {
-            const string defaultConfigUrl = "https://raw.githubusercontent.com/yuseok-kim-edushare/Program-Updater-for-Windows/refs/heads/main/example.json";
-            return args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
-                ? args[0]
-                : defaultConfigUrl;
         }
 
         private static void ValidateConfigUrl(string url)

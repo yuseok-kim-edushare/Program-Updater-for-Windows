@@ -4,4 +4,7 @@
     <WindowTitle>Program Updater</WindowTitle>
     <TitleText>Program Update in Progress</TitleText>
   </UI>
+  <Configuration>
+    <ConfigurationFilePath>https://raw.githubusercontent.com/yuseok-kim-edushare/Program-Updater-for-Windows/refs/heads/main/example.json</ConfigurationFilePath>
+  </Configuration>
 </Settings> 

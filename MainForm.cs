@@ -16,22 +16,23 @@ namespace ProgramUpdater
         private RichTextBox logTextBox;
         private UpdateService _updateService;
         private readonly ConfigurationService _configService;
+        private readonly SettingsService _settingsService;
 
-        public MainForm(ConfigurationService configService, UpdateService updateService)
+        public MainForm(ConfigurationService configService, UpdateService updateService, SettingsService settingsService)
         {
             _configService = configService;
             _updateService = updateService;
+            _settingsService = settingsService;
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
-            Settings.OnSettingsError += OnSettingsError;
             LoadSettings();
         }
 
         private void LoadSettings()
         {
-            this.Text = Settings.Default.WindowTitle;
-            titleLabel.Text = Settings.Default.TitleLabelText;
+            this.Text = _settingsService.WindowTitle;
+            titleLabel.Text = _settingsService.TitleText;
         }
 
         private void InitializeComponent()
@@ -218,17 +219,8 @@ namespace ProgramUpdater
             logTextBox.ScrollToCaret();
         }
 
-        private void OnSettingsError(string message)
-        {
-            if (logTextBox != null)
-            {
-                LogMessage($"Settings Error: {message}", LogLevel.Warning);
-            }
-        }
-
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            Settings.OnSettingsError -= OnSettingsError;
             base.OnFormClosing(e);
         }
     }
