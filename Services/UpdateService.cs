@@ -85,7 +85,7 @@ namespace ProgramUpdater.Services
                 _logCallback("Update was cancelled by user", LogLevel.Warning);
                 return false;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }
