@@ -260,6 +260,7 @@ namespace ProgramUpdater.Services
             }
         }
 
+        // Refactored BackupAndReplace method using asynchronous file I/O 
         private async Task BackupAndReplace(FileConfiguration file)
         {
             try
@@ -273,16 +274,29 @@ namespace ProgramUpdater.Services
                         Directory.CreateDirectory(backupDir);
                     }
 
-                    // Backup existing file
+                    // Backup existing file by copying it asynchronously instead of wrapping File.Move in Task.Run.
                     if (File.Exists(file.BackupPath))
                     {
                         File.Delete(file.BackupPath);
                     }
-                    await Task.Run(() => File.Move(file.CurrentPath, file.BackupPath));
+                    
+                    using (var sourceStream = new FileStream(file.CurrentPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                    using (var backupStream = new FileStream(file.BackupPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                    {
+                        await sourceStream.CopyToAsync(backupStream);
+                    }
+                    // Delete the original file after a successful backup copy.
+                    File.Delete(file.CurrentPath);
                 }
 
-                // Move new file to destination
-                await Task.Run(() => File.Move(file.NewPath, file.CurrentPath));
+                // Move new file to destination by copying asynchronously and then deleting the source new file.
+                using (var newFileStream = new FileStream(file.NewPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                using (var destinationStream = new FileStream(file.CurrentPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                {
+                    await newFileStream.CopyToAsync(destinationStream);
+                }
+                File.Delete(file.NewPath);
+
                 _logCallback($"{file.Name} installed successfully", LogLevel.Info);
             }
             catch (IOException ex)
