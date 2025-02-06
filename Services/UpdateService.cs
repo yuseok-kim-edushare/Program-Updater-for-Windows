@@ -87,7 +87,7 @@ namespace ProgramUpdater.Services
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw;
             }
         }
 
