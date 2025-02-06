@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
 using System.Net.Http;
+using System.Security.Cryptography;
 
 namespace ProgramUpdater
 {
@@ -140,9 +141,16 @@ namespace ProgramUpdater
             }
             catch (Exception ex)
             {
-                LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Close();
+                
+                if (ex is OperationCanceledException)
+                {
+                    LogMessage($"Update was cancelled by user: {ex.Message}", LogLevel.Warning);
+                }
+                else
+                {
+                    LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 

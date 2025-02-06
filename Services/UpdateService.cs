@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Diagnostics;
@@ -17,7 +18,7 @@ namespace ProgramUpdater.Services
         private readonly Action<string, LogLevel> _logCallback;
         private readonly Action<int, string> _progressCallback;
         private readonly IHttpClientFactory _httpClientFactory;
-        private bool _isCancellationRequested;
+        private CancellationTokenSource _cts;
 
         public UpdateService(
             string configUrl,
@@ -29,15 +30,15 @@ namespace ProgramUpdater.Services
             _logCallback = logCallback;
             _progressCallback = progressCallback;
             _httpClientFactory = httpClientFactory;
+            _cts = new CancellationTokenSource();
             
             // Set security protocol to TLS 1.2 and 1.3
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-            
         }
 
         public void RequestCancellation()
         {
-            _isCancellationRequested = true;
+            _cts?.Cancel();
         }
 
         public async Task<bool> PerformUpdate()
@@ -46,16 +47,15 @@ namespace ProgramUpdater.Services
             {
                 // Download and parse configuration
                 _logCallback("Downloading update configuration...", LogLevel.Info);
-                var config = await DownloadConfiguration();
-                if (_isCancellationRequested) return false;
-
+                var config = await DownloadConfiguration(_cts.Token);
+                
                 // Calculate total steps for progress
                 int totalSteps = config.Files.Count * 3; // Download, Verify, Replace
                 int currentStep = 0;
 
                 foreach (var file in config.Files)
                 {
-                    if (_isCancellationRequested) return false;
+                    _cts.Token.ThrowIfCancellationRequested();
 
                     // Check if main program needs to be stopped
                     if (file.IsExecutable && IsProcessRunning(file.CurrentPath))
@@ -66,16 +66,14 @@ namespace ProgramUpdater.Services
 
                     // Download new version
                     _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
-                    await DownloadFile(file.DownloadUrl, file.NewPath);
-                    if (_isCancellationRequested) return false;
+                    await DownloadFile(file.DownloadUrl, file.NewPath, _cts.Token);
 
                     // Verify hash
                     _progressCallback((currentStep++ * 100) / totalSteps, $"Verifying {file.Name}...");
-                    if (!await VerifyFileHash(file.NewPath, file.ExpectedHash))
+                    if (!await VerifyFileHash(file.NewPath, file.ExpectedHash, _cts.Token))
                     {
                         throw new Exception($"Hash verification failed for {file.Name}");
                     }
-                    if (_isCancellationRequested) return false;
 
                     // Backup and replace
                     _progressCallback((currentStep++ * 100) / totalSteps, $"Installing {file.Name}...");
@@ -96,6 +94,11 @@ namespace ProgramUpdater.Services
                 _logCallback("Update process completed successfully", LogLevel.Success);
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                _logCallback("Update was cancelled by user", LogLevel.Warning);
+                return false;
+            }
             catch (Exception ex)
             {
                 _logCallback($"Update failed: {ex.Message}", LogLevel.Error);
@@ -103,7 +106,7 @@ namespace ProgramUpdater.Services
             }
         }
 
-        private async Task<UpdateConfiguration> DownloadConfiguration()
+        private async Task<UpdateConfiguration> DownloadConfiguration(CancellationToken cancellationToken)
         {
             var uri = new Uri(_configUrl);
             if (uri.Scheme == Uri.UriSchemeHttp || 
@@ -111,7 +114,9 @@ namespace ProgramUpdater.Services
             {
                 using (var client = _httpClientFactory.CreateClient())
                 {
-                    var jsonString = await client.GetStringAsync(_configUrl);
+                    var response = await client.GetAsync(_configUrl, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+                    var jsonString = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
                 }
             }
@@ -143,19 +148,18 @@ namespace ProgramUpdater.Services
             }
         }
 
-
-        private async Task DownloadFile(string url, string destination)
+        private async Task DownloadFile(string url, string destination, CancellationToken cancellationToken)
         {
             try
             {
                 var uri = new Uri(url);
                 if (uri.Scheme == Uri.UriSchemeFtp || uri.Scheme == "ftps")
                 {
-                    await DownloadFileViaFtp(uri, destination);
+                    await DownloadFileViaFtp(uri, destination, cancellationToken);
                 }
                 else
                 {
-                    await DownloadFileViaHttp(url, destination);
+                    await DownloadFileViaHttp(url, destination, cancellationToken);
                 }
             }
             catch (HttpRequestException ex)
@@ -170,16 +174,19 @@ namespace ProgramUpdater.Services
             }
             catch (Exception ex)
             {
+                if (ex is OperationCanceledException)
+                    throw;
+                    
                 _logCallback($"Unexpected error during download: {ex.Message}", LogLevel.Error);
                 throw new Exception($"Failed to download file from {url}: {ex.Message}", ex);
             }
         }
 
-        private async Task DownloadFileViaHttp(string url, string destination)
+        private async Task DownloadFileViaHttp(string url, string destination, CancellationToken cancellationToken)
         {
             using (var client = _httpClientFactory.CreateClient())
             {
-                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 var totalBytes = response.Content.Headers.ContentLength ?? -1L;
@@ -189,12 +196,14 @@ namespace ProgramUpdater.Services
                 using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
                 using (var downloadStream = await response.Content.ReadAsStreamAsync())
                 {
-                    while (!_isCancellationRequested)
+                    while (true)
                     {
-                        var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        
+                        var count = await downloadStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
                         if (count == 0) break;
 
-                        await fileStream.WriteAsync(buffer, 0, count);
+                        await fileStream.WriteAsync(buffer, 0, count, cancellationToken);
                         bytesRead += count;
 
                         if (totalBytes > 0)
@@ -210,16 +219,10 @@ namespace ProgramUpdater.Services
                 {
                     throw new Exception($"Download incomplete. Expected {totalBytes} bytes but got {bytesRead} bytes.");
                 }
-
-                if (_isCancellationRequested)
-                {
-                    _logCallback("Download cancelled by user", LogLevel.Warning);
-                    throw new OperationCanceledException("Download cancelled by user");
-                }
             }
         }
 
-        private async Task DownloadFileViaFtp(Uri uri, string destination)
+        private async Task DownloadFileViaFtp(Uri uri, string destination, CancellationToken cancellationToken)
         {
             var request = (FtpWebRequest)WebRequest.Create(uri);
             request.Method = WebRequestMethods.Ftp.DownloadFile;
@@ -250,12 +253,14 @@ namespace ProgramUpdater.Services
                     var totalBytes = response.ContentLength;
                     var bytesRead = 0L;
 
-                    while (!_isCancellationRequested)
+                    while (true)
                     {
-                        var count = await responseStream.ReadAsync(buffer, 0, buffer.Length);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        
+                        var count = await responseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
                         if (count == 0) break;
 
-                        await fileStream.WriteAsync(buffer, 0, count);
+                        await fileStream.WriteAsync(buffer, 0, count, cancellationToken);
                         bytesRead += count;
 
                         if (totalBytes > 0)
@@ -265,46 +270,33 @@ namespace ProgramUpdater.Services
                         }
                     }
 
-                    await fileStream.FlushAsync();
+                    await fileStream.FlushAsync(cancellationToken);
 
                     // Verify the download size
                     if (totalBytes > 0 && bytesRead != totalBytes)
                     {
                         throw new Exception($"FTP download incomplete. Expected {totalBytes} bytes but got {bytesRead} bytes.");
                     }
-
-                    if (_isCancellationRequested)
-                    {
-                        _logCallback("FTP download cancelled by user", LogLevel.Warning);
-                        throw new OperationCanceledException("Download cancelled by user");
-                    }
                 }
             }
             catch (Exception ex)
             {
+                if (ex is OperationCanceledException)
+                    throw;
+                    
                 _logCallback($"FTP download failed: {ex.Message}", LogLevel.Error);
                 throw new Exception($"FTP download failed: {ex.Message}", ex);
             }
         }
 
-        private async Task<bool> VerifyFileHash(string filePath, string expectedHash)
+        private async Task<bool> VerifyFileHash(string filePath, string expectedHash, CancellationToken cancellationToken)
         {
-            SHA256 sha256 = null;
-            FileStream stream = null;
-            try
+            using (var sha256 = SHA256.Create())
+            using (var stream = File.OpenRead(filePath))
             {
-                sha256 = SHA256.Create();
-                stream = File.OpenRead(filePath);
-                var hash = await Task.Run(() => sha256.ComputeHash(stream));
+                var hash = await Task.Run(() => sha256.ComputeHash(stream), cancellationToken);
                 var actualHash = BitConverter.ToString(hash).Replace("-", "");
                 return string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase);
-            }
-            finally
-            {
-                if (sha256 != null)
-                    sha256.Dispose();
-                if (stream != null)
-                    stream.Dispose();
             }
         }
 
@@ -374,7 +366,8 @@ namespace ProgramUpdater.Services
 
         public void Dispose()
         {
-            // Dispose of any resources here
+            _cts?.Dispose();
+            _cts = null;
         }
     }
 } 
