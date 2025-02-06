@@ -132,22 +132,6 @@ namespace ProgramUpdater
             try
             {
                 var config = await _configService.GetConfiguration(_configUrl);
-
-                //You should inject the IHttpClientFactory into the UpdateService constructor
-                _updateService = new UpdateService(
-                    _configUrl,
-                    (message, level) => LogMessage(message, level),
-                    (progress, status) =>
-                    {
-                        this.InvokeIfRequired(() =>
-                        {
-                            progressBar.Value = progress;
-                            statusLabel.Text = status;
-                        });
-                    },
-                    _httpClientFactory
-                );
-
                 await _updateService.PerformUpdate();
             }
             catch (Exception ex)
