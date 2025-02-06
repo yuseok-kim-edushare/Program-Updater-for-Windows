@@ -50,7 +50,7 @@ namespace ProgramUpdater
 
             try
             {
-                ValidateConfigUrl(configUrl);                
+                ValidateConfigUrl(configUrl);
                 // Resolve MainForm from the service provider
                 var mainForm = _serviceProvider.GetRequiredService<MainForm>();
                 Application.Run(mainForm);
@@ -74,7 +74,10 @@ namespace ProgramUpdater
 
         private static void ConfigureServices(IServiceCollection services)
         {
-            // Configure HttpClient settings
+            // Add options: ensures that the Options system is available to the HttpClientFactory.
+            services.AddOptions();
+
+            // Register IHttpClientFactory with a named client "UpdateClient"
             services.AddHttpClient("UpdateClient", client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(30);
@@ -87,34 +90,19 @@ namespace ProgramUpdater
                 UseProxy = true,
                 UseCookies = false
             });
-            
-            // Register ConfigurationService with named HttpClient
+
+            // Register ConfigurationService using a valid IHttpClientFactory instance.
+            // This will throw an exception immediately if IHttpClientFactory is not registered.
             services.AddSingleton(serviceProvider =>
             {
-                IHttpClientFactory httpClientFactory = null;
-                try
-                {
-                    httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Trace.WriteLine($"HttpClientFactory 초기화 실패: {ex.Message}");
-                }
+                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                 return new ConfigurationService(httpClientFactory);
             });
-            
-            // Register UpdateService with its dependencies
+
+            // Register UpdateService with its dependencies.
             services.AddSingleton(serviceProvider =>
             {
-                IHttpClientFactory httpClientFactory = null;
-                try
-                {
-                    httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Trace.WriteLine($"HttpClientFactory 초기화 실패: {ex.Message}");
-                }
+                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 return new UpdateService(
                     configUrl,
@@ -124,8 +112,8 @@ namespace ProgramUpdater
                     configService
                 );
             });
-            
-            // Register MainForm
+
+            // Register MainForm.
             services.AddTransient(serviceProvider =>
             {
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
@@ -140,17 +128,18 @@ namespace ProgramUpdater
             {
                 return;
             }
-            if (_serviceProvider is IDisposable)
+
+            if (_serviceProvider is IDisposable disposable)
             {
-                ((IDisposable)_serviceProvider).Dispose();
+                disposable.Dispose();
             }
         }
 
         private static string GetConfigUrl(string[] args)
         {
             const string defaultConfigUrl = "https://raw.githubusercontent.com/yuseok-kim-edushare/Program-Updater-for-Windows/refs/heads/main/example.json";
-            return args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) 
-                ? args[0] 
+            return args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
+                ? args[0]
                 : defaultConfigUrl;
         }
 
@@ -161,9 +150,9 @@ namespace ProgramUpdater
                 throw new ArgumentException("Configuration URL cannot be empty.");
             }
 
-            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uriResult) || 
-                !(uriResult.Scheme == Uri.UriSchemeHttp || 
-                  uriResult.Scheme == Uri.UriSchemeHttps || 
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uriResult) ||
+                !(uriResult.Scheme == Uri.UriSchemeHttp ||
+                  uriResult.Scheme == Uri.UriSchemeHttps ||
                   uriResult.Scheme == Uri.UriSchemeFtp ||
                   uriResult.Scheme == "ftps"))
             {

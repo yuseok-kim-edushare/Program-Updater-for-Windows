@@ -204,6 +204,7 @@ namespace ProgramUpdater.Services
             catch (Exception ex)
             {
                 _logCallback($"HttpClientFactory 생성 실패: {ex.Message}", LogLevel.Warning);
+                _logCallback($"stack trace: {ex.StackTrace}", LogLevel.Error);
             }
 
             _fallbackClient ??= CreateFallbackHttpClient();

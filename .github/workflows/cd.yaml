@@ -44,7 +44,7 @@ jobs:
     - name: Compress updater.exe and .dll and settings.xml
       run: |
         mkdir ${{ github.workspace }}\release-files
-        Compress-Archive -Path ${{ github.workspace }}\bin\Release\net48\publish\updater.exe, ${{ github.workspace }}\bin\Release\net48\publish\*.dll, ${{ github.workspace }}\bin\Release\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater.zip
+        Compress-Archive -Path ${{ github.workspace }}\bin\Release\net48\publish\updater.exe, ${{ github.workspace }}\bin\Release\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\Release\net48\publish\*.dll, ${{ github.workspace }}\bin\Release\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater.zip
 
     
     - name: Get latest release version and Generate release notes

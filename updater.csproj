@@ -6,9 +6,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>8.0</LangVersion>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
-    <!-- Prevent .config file generation -->
-    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
+    <!-- Enable binding redirects -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationDefaultFont>Calibri, 10pt, style=regular</ApplicationDefaultFont>
@@ -32,16 +32,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <!-- Remove all config files -->
-  <Target Name="RemoveAllConfigFiles" BeforeTargets="Build">
-    <ItemGroup>
-      <AppConfigWithTargetPath Remove="App.config" />
-      <None Remove="$(OutputPath)\$(AssemblyName).exe.config" />
-      <None Remove="$(OutputPath)\*.config" />
-    </ItemGroup>
-    <Delete Files="$(OutputPath)\$(AssemblyName).exe.config" />
-    <Delete Files="$(OutputPath)\*.config" />
-  </Target>
-
 </Project>
