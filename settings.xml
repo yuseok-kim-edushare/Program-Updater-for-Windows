@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Settings>
+  <UI>
+    <WindowTitle>Program Updater</WindowTitle>
+    <TitleText>Program Update in Progress</TitleText>
+  </UI>
+</Settings> 

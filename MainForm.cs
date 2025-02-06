@@ -5,6 +5,7 @@ using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
 using System.Net.Http;
 using System.Security.Cryptography;
+using ProgramUpdater.Properties;
 
 namespace ProgramUpdater
 {
@@ -26,6 +27,13 @@ namespace ProgramUpdater
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
+            LoadSettings();
+        }
+
+        private void LoadSettings()
+        {
+            this.Text = Settings.Default.WindowTitle;
+            titleLabel.Text = Settings.Default.TitleLabelText;
         }
 
         private void InitializeComponent()
