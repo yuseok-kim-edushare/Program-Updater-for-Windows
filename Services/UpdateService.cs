@@ -6,9 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using ProgramUpdater.Models;
 using ProgramUpdater.Extensions;
+using System.Runtime.CompilerServices;
 
 namespace ProgramUpdater.Services
 {
@@ -56,42 +58,23 @@ namespace ProgramUpdater.Services
                 int totalSteps = config.Files.Count * 3; // Download, Verify, Replace
                 int currentStep = 0;
 
+                // Stop running executables
+                await StopRunningExecutables(config.Files);
+
                 foreach (var file in config.Files)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-
-                    // Check if main program needs to be stopped
-                    if (file.IsExecutable && IsProcessRunning(file.CurrentPath))
-                    {
-                        _logCallback($"Stopping process: {file.Name}", LogLevel.Info);
-                        await StopProcess(file.CurrentPath);
-                    }
-
-                    // Download new version
-                    _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
-                    await DownloadFile(file.DownloadUrl, file.NewPath, _cts.Token);
-
-                    // Verify hash
-                    _progressCallback((currentStep++ * 100) / totalSteps, $"Verifying {file.Name}...");
-                    if (!await VerifyFileHash(file.NewPath, file.ExpectedHash, _cts.Token))
-                    {
-                        throw new Exception($"Hash verification failed for {file.Name}");
-                    }
-
-                    // Backup and replace
-                    _progressCallback((currentStep++ * 100) / totalSteps, $"Installing {file.Name}...");
-                    await BackupAndReplace(file);
+                    currentStep = await DownloadAndVerifyFile(file, currentStep, totalSteps);
                 }
-
-                // Start executable if it was running before
+                
                 foreach (var file in config.Files)
                 {
-                    if (file.IsExecutable)
-                    {
-                        _logCallback($"Starting process: {file.Name}", LogLevel.Info);
-                        StartProcess(file.CurrentPath);
-                    }
+                    _cts.Token.ThrowIfCancellationRequested();
+                    currentStep = await BackupAndReplaceFile(file, currentStep, totalSteps);
                 }
+
+                // Start executables that were previously running
+                await StartExecutables(config.Files);
 
                 _progressCallback(100, "Update completed successfully");
                 _logCallback("Update process completed successfully", LogLevel.Success);
@@ -105,6 +88,55 @@ namespace ProgramUpdater.Services
             catch (Exception ex)
             {
                 throw ex;
+            }
+        }
+
+        private async Task StopRunningExecutables(IEnumerable<FileConfiguration> files)
+        {
+            foreach (var file in files)
+            {
+                if (file.IsExecutable && IsProcessRunning(file.CurrentPath))
+                {
+                    _logCallback($"Stopping process: {file.Name}", LogLevel.Info);
+                    await StopProcess(file.CurrentPath);
+                }
+            }
+        }
+
+        private async Task<int> DownloadAndVerifyFile(FileConfiguration file, int currentStep, int totalSteps)
+        {
+            // Download new version
+            _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
+            await DownloadFile(file.DownloadUrl, file.NewPath, _cts.Token);
+
+            // Verify hash
+            _progressCallback((currentStep++ * 100) / totalSteps, $"Verifying {file.Name}...");
+            if (!await VerifyFileHash(file.NewPath, file.ExpectedHash, _cts.Token))
+            {
+                throw new Exception($"Hash verification failed for {file.Name}");
+            }
+
+            return currentStep;
+        }
+
+        private async Task<int> BackupAndReplaceFile(FileConfiguration file, int currentStep, int totalSteps)
+        {
+            // Backup and replace
+            _progressCallback((currentStep++ * 100) / totalSteps, $"Installing {file.Name}...");
+            await BackupAndReplace(file);
+
+            return currentStep;
+        }
+
+        private async Task StartExecutables(IEnumerable<FileConfiguration> files)
+        {
+            foreach (var file in files)
+            {
+                if (file.IsExecutable)
+                {
+                    _logCallback($"Starting process: {file.Name}", LogLevel.Info);
+                    await Task.Run(() => StartProcess(file.CurrentPath));
+                }
             }
         }
 
