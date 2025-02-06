@@ -80,7 +80,7 @@ namespace ProgramUpdater
             {
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 var updateService = serviceProvider.GetRequiredService<UpdateService>();
-                return new MainForm(configUrl, configService, updateService);
+                return new MainForm(configService, updateService);
             });
         }
 

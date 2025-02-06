@@ -10,7 +10,6 @@ namespace ProgramUpdater
 {
     public partial class MainForm : Form
     {
-        private readonly string _configUrl;
         private TableLayoutPanel mainLayout;
         private Label titleLabel;
         private Label statusLabel;
@@ -20,9 +19,8 @@ namespace ProgramUpdater
         private UpdateService _updateService;
         private readonly ConfigurationService _configService;
 
-        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService)
+        public MainForm(ConfigurationService configService, UpdateService updateService)
         {
-            _configUrl = configUrl;
             _configService = configService;
             _updateService = updateService;
             InitializeComponent();
