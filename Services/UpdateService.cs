@@ -82,6 +82,14 @@ namespace ProgramUpdater.Services
 
                 _progressCallback(100, "Update completed successfully");
                 _logCallback("Update process completed successfully", LogLevel.Success);
+
+                // Cleanup backup files
+                foreach (var file in config.Files)
+                {
+                    await CleanupBackupFiles(file);
+                    _logCallback($"Cleaning up temporary files completed", LogLevel.Info);
+                }
+
                 return true;
             }
             catch (OperationCanceledException)
@@ -429,6 +437,14 @@ namespace ProgramUpdater.Services
                 }
             }
             _logCallback("Rollback process completed", LogLevel.Warning);
+        }
+
+        private async Task CleanupBackupFiles(FileConfiguration file)
+        {
+            if (File.Exists(file.BackupPath))
+            {
+                await Task.Run(() => File.Delete(file.BackupPath));
+            }
         }
 
         public void Dispose()
