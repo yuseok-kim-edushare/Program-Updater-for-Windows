@@ -76,7 +76,7 @@ jobs:
           if ($line -match "Update Version to (\d+\.\d+\.\d+)") {
             $messageParts = $line -split ' '
             $lastPart = $messageParts[-1]
-            echo "new_release=$version" >> $env:GITHUB_ENV
+            echo "new_release=$lastPart" >> $env:GITHUB_ENV
           }
         }
 
