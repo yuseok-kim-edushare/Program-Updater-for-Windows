@@ -48,6 +48,7 @@ namespace ProgramUpdater.Services
 
         public async Task<bool> PerformUpdate()
         {
+            var updatedFiles = new List<FileConfiguration>();
             try
             {
                 // Download and parse configuration
@@ -61,16 +62,19 @@ namespace ProgramUpdater.Services
                 // Stop running executables
                 await StopRunningExecutables(config.Files);
 
+                // First phase: Download and verify all files
                 foreach (var file in config.Files)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
                     currentStep = await DownloadAndVerifyFile(file, currentStep, totalSteps);
                 }
                 
+                // Second phase: Backup and replace all files
                 foreach (var file in config.Files)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
                     currentStep = await BackupAndReplaceFile(file, currentStep, totalSteps);
+                    updatedFiles.Add(file);
                 }
 
                 // Start executables that were previously running
@@ -82,11 +86,14 @@ namespace ProgramUpdater.Services
             }
             catch (OperationCanceledException)
             {
-                _logCallback("Update was cancelled by user", LogLevel.Warning);
+                _logCallback("Update was cancelled by user. Rolling back changes...", LogLevel.Warning);
+                await RollbackUpdates(updatedFiles);
                 return false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logCallback($"Update failed: {ex.Message}. Rolling back changes...", LogLevel.Error);
+                await RollbackUpdates(updatedFiles);
                 throw;
             }
         }
@@ -105,6 +112,7 @@ namespace ProgramUpdater.Services
 
         private async Task<int> DownloadAndVerifyFile(FileConfiguration file, int currentStep, int totalSteps)
         {
+
             // Download new version
             _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
             await DownloadFile(file.DownloadUrl, file.NewPath, _cts.Token);
@@ -113,6 +121,10 @@ namespace ProgramUpdater.Services
             _progressCallback((currentStep++ * 100) / totalSteps, $"Verifying {file.Name}...");
             if (!await VerifyFileHash(file.NewPath, file.ExpectedHash, _cts.Token))
             {
+                if (File.Exists(file.NewPath))
+                {
+                    File.Delete(file.NewPath);
+                }
                 throw new Exception($"Hash verification failed for {file.Name}");
             }
 
@@ -368,6 +380,55 @@ namespace ProgramUpdater.Services
                 FileName = exePath,
                 UseShellExecute = true
             });
+        }
+
+        private async Task RollbackUpdates(List<FileConfiguration> updatedFiles)
+        {
+            if (updatedFiles.Count == 0)
+            {
+                _logCallback("No files to roll back", LogLevel.Info);
+                return;
+            }
+
+            _logCallback("Starting rollback process...", LogLevel.Warning);
+            foreach (var file in updatedFiles)
+            {
+                try
+                {
+                    // Delete the current (new) file if it exists
+                    if (File.Exists(file.CurrentPath))
+                    {
+                        File.Delete(file.CurrentPath);
+                    }
+
+                    // Restore from backup if it exists
+                    if (File.Exists(file.BackupPath))
+                    {
+                        _logCallback($"Rolling back {file.Name}...", LogLevel.Info);
+                        using (var backupStream = new FileStream(file.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                        using (var currentStream = new FileStream(file.CurrentPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                        {
+                            await backupStream.CopyToAsync(currentStream);
+                        }
+                        
+                        // Delete the backup after successful restore
+                        File.Delete(file.BackupPath);
+                        _logCallback($"Successfully rolled back {file.Name}", LogLevel.Info);
+                    }
+
+                    // Clean up any downloaded files that might still exist
+                    if (File.Exists(file.NewPath))
+                    {
+                        File.Delete(file.NewPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logCallback($"Failed to roll back {file.Name}: {ex.Message}", LogLevel.Error);
+                    // Continue with other files even if one fails
+                }
+            }
+            _logCallback("Rollback process completed", LogLevel.Warning);
         }
 
         public void Dispose()
