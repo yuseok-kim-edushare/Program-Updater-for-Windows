@@ -1,14 +1,18 @@
 using System;
 using System.Windows.Forms;
 using System.Threading;
+using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using ProgramUpdater.Services;
+using System.Linq;
+using ProgramUpdater.Extensions;
 
 namespace ProgramUpdater
 {
     static class Program
     {
         private static IServiceProvider _serviceProvider;
+        private static string configUrl;
 
         [STAThread]
         static void Main(string[] args)
@@ -26,7 +30,7 @@ namespace ProgramUpdater
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            string configUrl = GetConfigUrl(args);
+            configUrl = GetConfigUrl(args);
 
             try
             {
@@ -49,11 +53,30 @@ namespace ProgramUpdater
         {
             // Register HttpClientFactory
             services.AddHttpClient();
-
-            // Register other services, including MainForm
-            services.AddTransient<ConfigurationService>();
-            services.AddTransient<UpdateService>();
-            services.AddTransient<MainForm>(); // Register MainForm as transient
+            
+            // Register services
+            services.AddSingleton<ConfigurationService>();
+            
+            // Register UpdateService with its dependencies
+            services.AddSingleton(serviceProvider =>
+            {
+                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                return new UpdateService(
+                    configUrl,
+                    (message, level) => LogMessage(message, level),
+                    (progress, status) => UpdateProgress(progress, status),
+                    httpClientFactory
+                );
+            });
+            
+            // Register MainForm with its configuration URL
+            services.AddTransient(serviceProvider =>
+            {
+                var configService = serviceProvider.GetRequiredService<ConfigurationService>();
+                var updateService = serviceProvider.GetRequiredService<UpdateService>();
+                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                return new MainForm(configUrl, configService, updateService, httpClientFactory);
+            });
         }
 
         private static void DisposeServices()
@@ -119,6 +142,20 @@ namespace ProgramUpdater
             {
                 HandleFatalError(ex);
             }
+        }
+
+        private static void LogMessage(string message, LogLevel level)
+        {
+            // This will be called by UpdateService to log messages
+            // The MainForm will handle displaying these messages
+            Application.OpenForms.OfType<MainForm>().FirstOrDefault()?.LogMessage(message, level);
+        }
+
+        private static void UpdateProgress(int progress, string status)
+        {
+            // This will be called by UpdateService to update progress
+            // The MainForm will handle displaying the progress
+            Application.OpenForms.OfType<MainForm>().FirstOrDefault()?.UpdateProgress(progress, status);
         }
     }
 } 
