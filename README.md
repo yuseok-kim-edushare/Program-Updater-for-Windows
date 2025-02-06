@@ -5,7 +5,8 @@ A lightweight, open-source program updater for Windows applications built with .
 ## Features
 
 - Modern Windows Forms UI with progress tracking
-- JSON-based configuration
+- XML-based settings configuration
+- JSON-based update configuration
 - Secure file verification using SHA256 hashes
 - Automatic backup of existing files
 - Process management (stops running programs before update)
@@ -33,9 +34,32 @@ git clone https://github.com/YOUR_USERNAME/Program_updater_for_win.git
 dotnet build --configuration Release
 ```
 
-## Usage
+## Configuration
 
-1. Create a configuration file (update_config.json) with your update details:
+### Settings Configuration (settings.xml)
+
+Create a `settings.xml` file in the same directory as the executable to customize the updater's behavior:
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<Settings>
+  <UI>
+    <WindowTitle>Program Updater</WindowTitle>
+    <TitleText>Program Update in Progress</TitleText>
+  </UI>
+  <Configuration>
+    <ConfigurationFilePath>https://raw.githubusercontent.com/your-username/your-repo/main/update_config.json</ConfigurationFilePath>
+  </Configuration>
+</Settings>
+```
+
+The settings.xml file allows you to:
+- Customize the window title and update message
+- Specify the update configuration file location (HTTP, HTTPS, FTP, or FTPS)
+
+### Update Configuration (JSON)
+
+Create a configuration file (update_config.json) with your update details:
 ```json
 {
     "files": [
@@ -51,20 +75,24 @@ dotnet build --configuration Release
     ]
 }
 ```
-also path can be ftp
+
+The configuration file can be hosted on HTTP, HTTPS, or FTP:
 ```
 ftp://your-server.com/path/to/update_config.json
 or
 ftp://username:password@your-server.com/updates/app.exe
 ```
-get file hash from windows powershell
+
+To get file hash from Windows PowerShell:
 ```PowerShell
 Get-FileHash -Path "C:\Program Files\YourApp\app.exe" -Algorithm SHA256
 ```
 
-2. Run the updater:
+## Usage
+
+1. Run the updater:
 ```bash
-updater.exe http://your-server.com/path/to/update_config.json
+updater.exe
 ```
 
 ## Contributing
