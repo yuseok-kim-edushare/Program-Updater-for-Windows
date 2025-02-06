@@ -5,6 +5,10 @@
     <TargetFrameworks>net48;net481</TargetFrameworks>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>8.0</LangVersion>
+    <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <!-- Prevent .config file generation -->
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationDefaultFont>Calibri, 10pt, style=regular</ApplicationDefaultFont>
@@ -22,5 +26,22 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="settings.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Remove all config files -->
+  <Target Name="RemoveAllConfigFiles" BeforeTargets="Build">
+    <ItemGroup>
+      <AppConfigWithTargetPath Remove="App.config" />
+      <None Remove="$(OutputPath)\$(AssemblyName).exe.config" />
+      <None Remove="$(OutputPath)\*.config" />
+    </ItemGroup>
+    <Delete Files="$(OutputPath)\$(AssemblyName).exe.config" />
+    <Delete Files="$(OutputPath)\*.config" />
+  </Target>
 
 </Project>
