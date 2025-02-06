@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
 using System.Net.Http;
+using System.Security.Cryptography;
 
 namespace ProgramUpdater
 {
@@ -18,14 +19,12 @@ namespace ProgramUpdater
         private RichTextBox logTextBox;
         private UpdateService _updateService;
         private readonly ConfigurationService _configService;
-        private readonly IHttpClientFactory _httpClientFactory;
 
-        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService, IHttpClientFactory httpClientFactory)
+        public MainForm(string configUrl, ConfigurationService configService, UpdateService updateService)
         {
             _configUrl = configUrl;
             _configService = configService;
             _updateService = updateService;
-            _httpClientFactory = httpClientFactory;
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
@@ -131,15 +130,38 @@ namespace ProgramUpdater
         {
             try
             {
-                var config = await _configService.GetConfiguration(_configUrl);
-                await _updateService.PerformUpdate();
+                bool updateSuccess = await _updateService.PerformUpdate();
+                if (updateSuccess)
+                {
+                    ChangeCancelButtonToClose();
+                }
             }
             catch (Exception ex)
             {
-                LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Close();
+                if (ex is OperationCanceledException)
+                {
+                    LogMessage($"Update was cancelled by user: {ex.Message}", LogLevel.Warning);
+                }
+                else
+                {
+                    LogMessage($"Update failed: {ex.Message}", LogLevel.Error);
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                ChangeCancelButtonToClose();
             }
+        }
+
+        private void ChangeCancelButtonToClose()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ChangeCancelButtonToClose));
+                return;
+            }
+
+            cancelButton.Text = "Close";
+            cancelButton.Click -= CancelButton_Click;
+            cancelButton.Click += (s, e) => Close();
         }
 
         private void CancelButton_Click(object sender, EventArgs e)

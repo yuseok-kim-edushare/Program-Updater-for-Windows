@@ -68,7 +68,15 @@ jobs:
         echo "release_notes<<EOF" >> $env:GITHUB_ENV
         echo "$releaseNotesContent" >> $env:GITHUB_ENV
         echo "EOF" >> $env:GITHUB_ENV
-  
+
+    - name: Explicit Version Order apply to create release
+      run: |
+        $latestCommitMessage = (git log -1 --pretty=%B)
+        if ($latestCommitMessage -match "Update Version to (\d+\.\d+\.\d+)") {
+          $version = $matches[1]
+          echo "new_release=$version" >> $env:GITHUB_ENV
+        }
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
