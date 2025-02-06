@@ -130,17 +130,14 @@ namespace ProgramUpdater
         {
             try
             {
-                var config = await _configService.GetConfiguration(_configUrl);
                 bool updateSuccess = await _updateService.PerformUpdate();
                 if (updateSuccess)
                 {
                     ChangeToCancelToCloseButton();
                 }
-
             }
             catch (Exception ex)
             {
-                
                 if (ex is OperationCanceledException)
                 {
                     LogMessage($"Update was cancelled by user: {ex.Message}", LogLevel.Warning);

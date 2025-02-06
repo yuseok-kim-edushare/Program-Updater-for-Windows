@@ -18,18 +18,21 @@ namespace ProgramUpdater.Services
         private readonly Action<string, LogLevel> _logCallback;
         private readonly Action<int, string> _progressCallback;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ConfigurationService _configurationService;
         private CancellationTokenSource _cts;
 
         public UpdateService(
             string configUrl,
             Action<string, LogLevel> logCallback,
             Action<int, string> progressCallback,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            ConfigurationService configurationService)
         {
             _configUrl = configUrl;
             _logCallback = logCallback;
             _progressCallback = progressCallback;
             _httpClientFactory = httpClientFactory;
+            _configurationService = configurationService;
             _cts = new CancellationTokenSource();
             
             // Set security protocol to TLS 1.2 and 1.3
@@ -47,7 +50,7 @@ namespace ProgramUpdater.Services
             {
                 // Download and parse configuration
                 _logCallback("Downloading update configuration...", LogLevel.Info);
-                var config = await DownloadConfiguration(_cts.Token);
+                var config = await _configurationService.GetConfiguration(_configUrl);
                 
                 // Calculate total steps for progress
                 int totalSteps = config.Files.Count * 3; // Download, Verify, Replace
@@ -102,48 +105,6 @@ namespace ProgramUpdater.Services
             catch (Exception ex)
             {
                 throw ex;
-            }
-        }
-
-        private async Task<UpdateConfiguration> DownloadConfiguration(CancellationToken cancellationToken)
-        {
-            var uri = new Uri(_configUrl);
-            if (uri.Scheme == Uri.UriSchemeHttp || 
-                  uri.Scheme == Uri.UriSchemeHttps)
-            {
-                using (var client = _httpClientFactory.CreateClient())
-                {
-                    var response = await client.GetAsync(_configUrl, cancellationToken);
-                    response.EnsureSuccessStatusCode();
-                    var jsonString = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
-                }
-            }
-            else
-            {
-                var request = (FtpWebRequest)WebRequest.Create(uri);
-                request.Method = WebRequestMethods.Ftp.DownloadFile;
-                request.Timeout = 30000; // 30 second timeout
-                if (uri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase))
-                {
-                    request.EnableSsl = true;
-                    request.KeepAlive = false;
-                }
-                if (!string.IsNullOrEmpty(uri.UserInfo))
-                {
-                    var credentials = uri.UserInfo.Split(':');
-                    request.Credentials = new NetworkCredential(
-                        credentials[0],
-                        credentials.Length > 1 ? credentials[1] : string.Empty
-                    );
-                }
-                using (var response = (FtpWebResponse)await request.GetResponseAsync())
-                using (var responseStream = response.GetResponseStream())
-                using (var reader = new StreamReader(responseStream))
-                {
-                    var jsonString = await reader.ReadToEndAsync();
-                    return JsonConvert.DeserializeObject<UpdateConfiguration>(jsonString);
-                }
             }
         }
 

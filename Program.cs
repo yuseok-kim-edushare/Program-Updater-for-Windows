@@ -65,11 +65,13 @@ namespace ProgramUpdater
             services.AddSingleton(serviceProvider =>
             {
                 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 return new UpdateService(
                     configUrl,
                     (message, level) => LogMessage(message, level),
                     (progress, status) => UpdateProgress(progress, status),
-                    httpClientFactory
+                    httpClientFactory,
+                    configService
                 );
             });
             
