@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ProgramUpdater.Services;
 using System.Linq;
 using ProgramUpdater.Extensions;
+using System.Net;
 
 namespace ProgramUpdater
 {
@@ -17,11 +18,26 @@ namespace ProgramUpdater
         [STAThread]
         static void Main(string[] args)
         {
+            SetupSecurityProtocol();
+
             // Set up dependency injection
             var services = new ServiceCollection();
             ConfigureServices(services);
 
-            _serviceProvider = services.BuildServiceProvider();
+            try
+            {
+                _serviceProvider = services.BuildServiceProvider();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"서비스 초기화 실패: {ex.Message}\n프로그램을 다시 시작해주세요.",
+                    "초기화 오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             // Set up global exception handling
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
@@ -49,22 +65,56 @@ namespace ProgramUpdater
             }
         }
 
+        private static void SetupSecurityProtocol()
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+            ServicePointManager.DefaultConnectionLimit = 10;
+            ServicePointManager.Expect100Continue = false;
+        }
+
         private static void ConfigureServices(IServiceCollection services)
         {
-            // Register HttpClientFactory
-            services.AddHttpClient();
+            // Configure HttpClient settings
+            services.AddHttpClient("UpdateClient", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.DefaultRequestHeaders.ConnectionClose = true;
+            }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 10,
+                UseProxy = true,
+                UseCookies = false
+            });
             
-            // Register services
+            // Register ConfigurationService with named HttpClient
             services.AddSingleton(serviceProvider =>
             {
-                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                IHttpClientFactory httpClientFactory = null;
+                try
+                {
+                    httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.WriteLine($"HttpClientFactory 초기화 실패: {ex.Message}");
+                }
                 return new ConfigurationService(httpClientFactory);
             });
             
             // Register UpdateService with its dependencies
             services.AddSingleton(serviceProvider =>
             {
-                var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                IHttpClientFactory httpClientFactory = null;
+                try
+                {
+                    httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.WriteLine($"HttpClientFactory 초기화 실패: {ex.Message}");
+                }
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();
                 return new UpdateService(
                     configUrl,
@@ -75,7 +125,7 @@ namespace ProgramUpdater
                 );
             });
             
-            // Register MainForm with its configuration URL
+            // Register MainForm
             services.AddTransient(serviceProvider =>
             {
                 var configService = serviceProvider.GetRequiredService<ConfigurationService>();

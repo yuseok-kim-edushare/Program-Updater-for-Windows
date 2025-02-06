@@ -1,38 +1,51 @@
 using System;
-using System.Configuration;
 using System.IO;
 using System.Xml.Linq;
+using System.Windows.Forms;
 
-namespace ProgramUpdater.Properties
+namespace ProgramUpdater
 {
-    public class Settings : ApplicationSettingsBase
+    public class Settings
     {
-        private static Settings defaultInstance = ((Settings)(ApplicationSettingsBase.Synchronized(new Settings())));
-        private static XDocument userSettings;
+        private static readonly Settings _instance = new Settings();
+        private static XDocument _userSettings;
+        private const string DEFAULT_WINDOW_TITLE = "Program Updater";
+        private const string DEFAULT_TITLE_TEXT = "Program Update in Progress";
+        public static event Action<string> OnSettingsError;
 
-        static Settings()
+        private Settings()
+        {
+            LoadSettings();
+        }
+
+        private void LoadSettings()
         {
             try
             {
                 string settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
                 if (File.Exists(settingsPath))
                 {
-                    userSettings = XDocument.Load(settingsPath);
+                    _userSettings = XDocument.Load(settingsPath);
+                }
+                else
+                {
+                    NotifyError($"Settings file not found at: {settingsPath}");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                userSettings = null;
+                NotifyError($"Failed to load settings: {ex.Message}");
+                _userSettings = null;
             }
         }
 
-        public static Settings Default
+        private void NotifyError(string message)
         {
-            get
-            {
-                return defaultInstance;
-            }
+            OnSettingsError?.Invoke(message);
+            MessageBox.Show(message, "Settings Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+
+        public static Settings Default => _instance;
 
         public string WindowTitle
         {
@@ -40,19 +53,23 @@ namespace ProgramUpdater.Properties
             {
                 try
                 {
-                    if (userSettings != null)
+                    if (_userSettings?.Root != null)
                     {
-                        return userSettings.Root
-                            ?.Element("UI")
-                            ?.Element("WindowTitle")
-                            ?.Value ?? "Program Updater";
+                        var element = _userSettings.Root
+                            .Element("UI")
+                            ?.Element("WindowTitle");
+
+                        if (element != null)
+                        {
+                            return element.Value;
+                        }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Fallback to default if there's any error
+                    NotifyError($"Error reading WindowTitle: {ex.Message}");
                 }
-                return "Program Updater";
+                return DEFAULT_WINDOW_TITLE;
             }
         }
 
@@ -62,20 +79,29 @@ namespace ProgramUpdater.Properties
             {
                 try
                 {
-                    if (userSettings != null)
+                    if (_userSettings?.Root != null)
                     {
-                        return userSettings.Root
-                            ?.Element("UI")
-                            ?.Element("TitleText")
-                            ?.Value ?? "Program Update in Progress";
+                        var element = _userSettings.Root
+                            .Element("UI")
+                            ?.Element("TitleText");
+
+                        if (element != null)
+                        {
+                            return element.Value;
+                        }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Fallback to default if there's any error
+                    NotifyError($"Error reading TitleText: {ex.Message}");
                 }
-                return "Program Update in Progress";
+                return DEFAULT_TITLE_TEXT;
             }
+        }
+
+        public void Reload()
+        {
+            LoadSettings();
         }
     }
 } 

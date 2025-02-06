@@ -22,6 +22,7 @@ namespace ProgramUpdater.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ConfigurationService _configurationService;
         private CancellationTokenSource _cts;
+        private HttpClient _fallbackClient;
 
         public UpdateService(
             string configUrl,
@@ -53,8 +54,21 @@ namespace ProgramUpdater.Services
             {
                 // Download and parse configuration
                 _logCallback("Downloading update configuration...", LogLevel.Info);
-                var config = await _configurationService.GetConfiguration(_configUrl);
-                
+                UpdateConfiguration config;
+                try
+                {
+                    config = await _configurationService.GetConfiguration(_configUrl);
+                    if (config?.Files == null || config.Files.Count == 0)
+                    {
+                        throw new InvalidOperationException("Update configuration contains no files to update");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logCallback($"Failed to get update configuration: {ex.Message}", LogLevel.Error);
+                    throw;
+                }
+
                 // Calculate total steps for progress
                 int totalSteps = config.Files.Count * 3; // Download, Verify, Replace
                 int currentStep = 0;
@@ -100,8 +114,26 @@ namespace ProgramUpdater.Services
             }
             catch (Exception ex)
             {
-                _logCallback($"Update failed: {ex.Message}. Rolling back changes...", LogLevel.Error);
+                string errorMessage;
+                if (ex.InnerException != null)
+                {
+                    errorMessage = $"업데이트 실패: {ex.InnerException.Message}";
+                    _logCallback(errorMessage, LogLevel.Error);
+                    _logCallback($"상세 오류: {ex.Message}", LogLevel.Error);
+                }
+                else
+                {
+                    errorMessage = $"업데이트 실패: {ex.Message}";
+                    _logCallback(errorMessage, LogLevel.Error);
+                }
+
                 await RollbackUpdates(updatedFiles);
+                
+                // Log the full stack trace for debugging
+                if (System.Diagnostics.Debugger.IsAttached)
+                {
+                    _logCallback($"스택 추적: {ex.StackTrace}", LogLevel.Error);
+                }
                 throw;
             }
         }
@@ -160,6 +192,41 @@ namespace ProgramUpdater.Services
             }
         }
 
+        private HttpClient GetHttpClient()
+        {
+            try
+            {
+                if (_httpClientFactory != null)
+                {
+                    return _httpClientFactory.CreateClient("UpdateClient");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logCallback($"HttpClientFactory 생성 실패: {ex.Message}", LogLevel.Warning);
+            }
+
+            _fallbackClient ??= CreateFallbackHttpClient();
+            return _fallbackClient;
+        }
+
+        private HttpClient CreateFallbackHttpClient()
+        {
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 10,
+                UseProxy = true,
+                UseCookies = false
+            };
+
+            return new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+        }
+
         private async Task DownloadFile(string url, string destination, CancellationToken cancellationToken)
         {
             try
@@ -176,27 +243,27 @@ namespace ProgramUpdater.Services
             }
             catch (HttpRequestException ex)
             {
-                _logCallback($"HTTP download failed: {ex.Message}", LogLevel.Error);
-                throw new Exception($"Failed to download file from {url}: {ex.Message}", ex);
+                _logCallback($"HTTP 다운로드 실패: {ex.Message}", LogLevel.Error);
+                throw new Exception($"파일 다운로드 실패 ({url}): {ex.Message}", ex);
             }
             catch (WebException ex)
             {
-                _logCallback($"Network error during download: {ex.Message}", LogLevel.Error);
-                throw new Exception($"Network error downloading from {url}: {ex.Message}", ex);
+                _logCallback($"네트워크 오류: {ex.Message}", LogLevel.Error);
+                throw new Exception($"네트워크 오류 ({url}): {ex.Message}", ex);
             }
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException)
                     throw;
                     
-                _logCallback($"Unexpected error during download: {ex.Message}", LogLevel.Error);
-                throw new Exception($"Failed to download file from {url}: {ex.Message}", ex);
+                _logCallback($"예기치 않은 오류: {ex.Message}", LogLevel.Error);
+                throw new Exception($"파일 다운로드 실패 ({url}): {ex.Message}", ex);
             }
         }
 
         private async Task DownloadFileViaHttp(string url, string destination, CancellationToken cancellationToken)
         {
-            using (var client = _httpClientFactory.CreateClient())
+            using (var client = GetHttpClient())
             {
                 var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
@@ -221,7 +288,7 @@ namespace ProgramUpdater.Services
                         if (totalBytes > 0)
                         {
                             var percentage = (int)((bytesRead * 100) / totalBytes);
-                            _progressCallback(percentage, $"Downloading... {percentage}%");
+                            _progressCallback(percentage, $"다운로드 중... {percentage}%");
                         }
                     }
                 }
@@ -229,7 +296,7 @@ namespace ProgramUpdater.Services
                 // Verify the download size if Content-Length was provided
                 if (totalBytes > 0 && bytesRead != totalBytes)
                 {
-                    throw new Exception($"Download incomplete. Expected {totalBytes} bytes but got {bytesRead} bytes.");
+                    throw new Exception($"다운로드가 불완전합니다. 예상 크기: {totalBytes} 바이트, 실제 크기: {bytesRead} 바이트");
                 }
             }
         }
@@ -451,6 +518,8 @@ namespace ProgramUpdater.Services
         {
             _cts?.Dispose();
             _cts = null;
+            _fallbackClient?.Dispose();
+            _fallbackClient = null;
         }
     }
 } 

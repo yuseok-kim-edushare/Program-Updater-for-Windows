@@ -3,9 +3,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using ProgramUpdater.Services;
 using ProgramUpdater.Extensions;
-using System.Net.Http;
-using System.Security.Cryptography;
-using ProgramUpdater.Properties;
 
 namespace ProgramUpdater
 {
@@ -27,6 +24,7 @@ namespace ProgramUpdater
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
+            Settings.OnSettingsError += OnSettingsError;
             LoadSettings();
         }
 
@@ -218,6 +216,20 @@ namespace ProgramUpdater
             logTextBox.AppendText($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}{Environment.NewLine}");
             logTextBox.SelectionColor = logTextBox.ForeColor;
             logTextBox.ScrollToCaret();
+        }
+
+        private void OnSettingsError(string message)
+        {
+            if (logTextBox != null)
+            {
+                LogMessage($"Settings Error: {message}", LogLevel.Warning);
+            }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            Settings.OnSettingsError -= OnSettingsError;
+            base.OnFormClosing(e);
         }
     }
 } 
