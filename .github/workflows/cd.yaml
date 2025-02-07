@@ -39,12 +39,14 @@ jobs:
     
     - name: Build solution for release (without tests)
       run: |
-        dotnet publish updater.csproj --configuration Release -f net48
+        dotnet publish updater.csproj --configuration Admin -f net48
+        dotnet publish updater.csproj --configuration NonAdmin -f net48
     
     - name: Compress updater.exe and .dll and settings.xml
       run: |
         mkdir ${{ github.workspace }}\release-files
-        Compress-Archive -Path ${{ github.workspace }}\bin\Release\net48\publish\updater.exe, ${{ github.workspace }}\bin\Release\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\Release\net48\publish\*.dll, ${{ github.workspace }}\bin\Release\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater.zip
+        Compress-Archive -Path ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe, ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\Admin\net48\publish\*.dll, ${{ github.workspace }}\bin\Admin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-admin.zip
+        Compress-Archive -Path ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe, ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\NonAdmin\net48\publish\*.dll, ${{ github.workspace }}\bin\NonAdmin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-nonadmin.zip
 
     
     - name: Get latest release version and Generate release notes
@@ -84,7 +86,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ${{ github.workspace }}\release-files\updater.zip
+          ${{ github.workspace }}\release-files\updater-admin.zip
+          ${{ github.workspace }}\release-files\updater-nonadmin.zip
         tag_name: ${{ env.new_release }}
         name: ${{ env.new_release }}
         body: ${{ env.release_notes }}
