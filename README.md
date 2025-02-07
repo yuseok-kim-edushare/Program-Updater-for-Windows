@@ -31,8 +31,13 @@ git clone https://github.com/YOUR_USERNAME/Program_updater_for_win.git
 
 3. Build the solution:
 ```bash
-dotnet build --configuration Release
+dotnet build --configuration Admin
+dotnet build --configuration NonAdmin
 ```
+- If you need to exe requires admin privileges, you need to build the project with the Admin configuration.
+  - like update program in C:\Program Files\YourApp\
+- If you need to exe does not require admin privileges, you need to build the project with the NonAdmin configuration.
+  - like update program in C:\Users\YourName\AppData\Local\YourApp\
 
 ## Configuration
 
