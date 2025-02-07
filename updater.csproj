@@ -9,11 +9,20 @@
     <!-- Enable binding redirects -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Admin'">
+    <ApplicationManifest>app.admin.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'NonAdmin'">
+    <ApplicationManifest>app.noadmin.manifest</ApplicationManifest>
+  </PropertyGroup>
+
   <PropertyGroup>
     <ApplicationDefaultFont>Calibri, 10pt, style=regular</ApplicationDefaultFont>
   </PropertyGroup>
+
   <PropertyGroup>
     <Company>Your Company Name</Company>
     <Product>Updater</Product>
