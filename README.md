@@ -18,7 +18,8 @@ A lightweight, open-source program updater for Windows applications built with .
 
 - Windows 7 or later
 - .NET Framework 4.8 or later
-- (For Development) Visual Studio 2019/2022 Community Edition or any other compatible IDE
+- (For Development) Visual Studio 2019+
+  - or .NET 8+ SDK for using dotnet build command
 
 ## Building the Project
 
