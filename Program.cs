@@ -14,6 +14,9 @@ namespace ProgramUpdater
     {
         private static IServiceProvider _serviceProvider;
         private static string configUrl;
+        private static MainForm _mainForm;
+        private static readonly System.Collections.Generic.Queue<(string Message, LogLevel Level)> _pendingLogs = 
+            new System.Collections.Generic.Queue<(string, LogLevel)>();
 
         [STAThread]
         static void Main(string[] args)
@@ -27,30 +30,16 @@ namespace ProgramUpdater
             try
             {
                 _serviceProvider = services.BuildServiceProvider();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"서비스 초기화 실패: {ex.Message}\n프로그램을 다시 시작해주세요.",
-                    "초기화 오류",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                return;
-            }
+                _mainForm = _serviceProvider.GetRequiredService<MainForm>();
+                
+                // Process any pending logs that occurred during initialization
+                while (_pendingLogs.Count > 0)
+                {
+                    var (message, level) = _pendingLogs.Dequeue();
+                    _mainForm.LogMessage(message, level);
+                }
 
-            // Set up global exception handling
-            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-            Application.ThreadException += Application_ThreadException;
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
-            try
-            {
-                // Resolve MainForm from the service provider
-                var mainForm = _serviceProvider.GetRequiredService<MainForm>();
-                Application.Run(mainForm);
+                Application.Run(_mainForm);
             }
             catch (Exception ex)
             {
@@ -75,7 +64,10 @@ namespace ProgramUpdater
             services.AddOptions();
 
             // Register SettingsService
-            services.AddSingleton<SettingsService>();
+            services.AddSingleton(serviceProvider =>
+            {
+                return new SettingsService((message, level) => LogMessage(message, level));
+            });
 
             // Register IHttpClientFactory with a named client "UpdateClient"
             services.AddHttpClient("UpdateClient", client =>
@@ -167,16 +159,26 @@ namespace ProgramUpdater
 
         private static void LogMessage(string message, LogLevel level)
         {
-            // This will be called by UpdateService to log messages
-            // The MainForm will handle displaying these messages
-            Application.OpenForms.OfType<MainForm>().FirstOrDefault()?.LogMessage(message, level);
+            if (_mainForm == null)
+            {
+                // Queue the message if MainForm isn't ready yet
+                _pendingLogs.Enqueue((message, level));
+                return;
+            }
+
+            if (Application.OpenForms.Count == 0)
+            {
+                // Queue the message if no forms are open yet
+                _pendingLogs.Enqueue((message, level));
+                return;
+            }
+
+            _mainForm.LogMessage(message, level);
         }
 
         private static void UpdateProgress(int progress, string status)
         {
-            // This will be called by UpdateService to update progress
-            // The MainForm will handle displaying the progress
-            Application.OpenForms.OfType<MainForm>().FirstOrDefault()?.UpdateProgress(progress, status);
+            _mainForm?.UpdateProgress(progress, status);
         }
     }
 } 

@@ -20,19 +20,28 @@ namespace ProgramUpdater
 
         public MainForm(ConfigurationService configService, UpdateService updateService, SettingsService settingsService)
         {
-            _configService = configService;
-            _updateService = updateService;
-            _settingsService = settingsService;
             InitializeComponent();
             InitializeCustomComponents();
             SetupEventHandlers();
+
+            _configService = configService;
+            _updateService = updateService;
+            _settingsService = settingsService;
+            
             LoadSettings();
         }
 
         private void LoadSettings()
         {
-            this.Text = _settingsService.WindowTitle;
-            titleLabel.Text = _settingsService.TitleText;
+            try 
+            {
+                this.Text = _settingsService.WindowTitle;
+                titleLabel.Text = _settingsService.TitleText;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Failed to load settings: {ex.Message}", LogLevel.Error);
+            }
         }
 
         private void InitializeComponent()
