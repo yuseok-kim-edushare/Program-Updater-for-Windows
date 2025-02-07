@@ -9,6 +9,7 @@
     <!-- Enable binding redirects -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationDefaultFont>Calibri, 10pt, style=regular</ApplicationDefaultFont>
