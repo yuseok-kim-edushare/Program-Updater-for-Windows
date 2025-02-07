@@ -48,7 +48,6 @@ namespace ProgramUpdater
 
             try
             {
-                ValidateConfigUrl(configUrl);
                 // Resolve MainForm from the service provider
                 var mainForm = _serviceProvider.GetRequiredService<MainForm>();
                 Application.Run(mainForm);
@@ -135,23 +134,6 @@ namespace ProgramUpdater
             if (_serviceProvider is IDisposable disposable)
             {
                 disposable.Dispose();
-            }
-        }
-
-        private static void ValidateConfigUrl(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                throw new ArgumentException("Configuration URL cannot be empty.");
-            }
-
-            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uriResult) ||
-                !(uriResult.Scheme == Uri.UriSchemeHttp ||
-                  uriResult.Scheme == Uri.UriSchemeHttps ||
-                  uriResult.Scheme == Uri.UriSchemeFtp ||
-                  uriResult.Scheme == "ftps"))
-            {
-                throw new ArgumentException("Invalid configuration URL format. Supported schemes are HTTP, HTTPS, FTP, and FTPS.");
             }
         }
 
