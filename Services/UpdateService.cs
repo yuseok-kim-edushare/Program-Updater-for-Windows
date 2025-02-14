@@ -232,6 +232,13 @@ namespace ProgramUpdater.Services
         {
             try
             {
+                // Create directory if it doesn't exist
+                var destinationDir = Path.GetDirectoryName(destination);
+                if (!string.IsNullOrEmpty(destinationDir))
+                {
+                    Directory.CreateDirectory(destinationDir);
+                }
+
                 var uri = new Uri(url);
                 if (uri.Scheme == Uri.UriSchemeFtp || uri.Scheme == "ftps")
                 {
@@ -385,15 +392,26 @@ namespace ProgramUpdater.Services
         {
             try
             {
+                // Create directories for current path and new path if they don't exist
+                var currentDir = Path.GetDirectoryName(file.CurrentPath);
+                var newDir = Path.GetDirectoryName(file.NewPath);
+                var backupDir = Path.GetDirectoryName(file.BackupPath);
+
+                if (!string.IsNullOrEmpty(currentDir))
+                {
+                    Directory.CreateDirectory(currentDir);
+                }
+                if (!string.IsNullOrEmpty(newDir))
+                {
+                    Directory.CreateDirectory(newDir);
+                }
+                if (!string.IsNullOrEmpty(backupDir))
+                {
+                    Directory.CreateDirectory(backupDir);
+                }
+
                 if (File.Exists(file.CurrentPath))
                 {
-                    // Create backup directory if it doesn't exist
-                    var backupDir = Path.GetDirectoryName(file.BackupPath);
-                    if (!string.IsNullOrEmpty(backupDir))
-                    {
-                        Directory.CreateDirectory(backupDir);
-                    }
-
                     // Backup existing file by copying it asynchronously instead of wrapping File.Move in Task.Run.
                     if (File.Exists(file.BackupPath))
                     {
@@ -471,6 +489,13 @@ namespace ProgramUpdater.Services
             {
                 try
                 {
+                    // Create directory for current path if it doesn't exist
+                    var currentDir = Path.GetDirectoryName(file.CurrentPath);
+                    if (!string.IsNullOrEmpty(currentDir))
+                    {
+                        Directory.CreateDirectory(currentDir);
+                    }
+
                     // Delete the current (new) file if it exists
                     if (File.Exists(file.CurrentPath))
                     {
