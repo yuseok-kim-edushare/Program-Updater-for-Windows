@@ -23,6 +23,7 @@ namespace ProgramUpdater.Services
         private readonly ConfigurationService _configurationService;
         private CancellationTokenSource _cts;
         private HttpClient _fallbackClient;
+        private readonly HashSet<string> _checkedDirectories;
 
         public UpdateService(
             string configUrl,
@@ -37,6 +38,7 @@ namespace ProgramUpdater.Services
             _httpClientFactory = httpClientFactory;
             _configurationService = configurationService;
             _cts = new CancellationTokenSource();
+            _checkedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
             // Set security protocol to TLS 1.2 and 1.3
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
@@ -228,16 +230,25 @@ namespace ProgramUpdater.Services
             };
         }
 
+        private void EnsureDirectoryExists(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+
+            var dir = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(dir)) return;
+
+            if (_checkedDirectories.Add(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+        }
+
         private async Task DownloadFile(string url, string destination, CancellationToken cancellationToken)
         {
             try
             {
-                // Create directory if it doesn't exist
-                var destinationDir = Path.GetDirectoryName(destination);
-                if (!string.IsNullOrEmpty(destinationDir))
-                {
-                    Directory.CreateDirectory(destinationDir);
-                }
+                // Create directory if it doesn't exist using the cache
+                EnsureDirectoryExists(destination);
 
                 var uri = new Uri(url);
                 if (uri.Scheme == Uri.UriSchemeFtp || uri.Scheme == "ftps")
@@ -392,23 +403,10 @@ namespace ProgramUpdater.Services
         {
             try
             {
-                // Create directories for current path and new path if they don't exist
-                var currentDir = Path.GetDirectoryName(file.CurrentPath);
-                var newDir = Path.GetDirectoryName(file.NewPath);
-                var backupDir = Path.GetDirectoryName(file.BackupPath);
-
-                if (!string.IsNullOrEmpty(currentDir))
-                {
-                    Directory.CreateDirectory(currentDir);
-                }
-                if (!string.IsNullOrEmpty(newDir))
-                {
-                    Directory.CreateDirectory(newDir);
-                }
-                if (!string.IsNullOrEmpty(backupDir))
-                {
-                    Directory.CreateDirectory(backupDir);
-                }
+                // Create directories for current path and new path if they don't exist using the cache
+                EnsureDirectoryExists(file.CurrentPath);
+                EnsureDirectoryExists(file.NewPath);
+                EnsureDirectoryExists(file.BackupPath);
 
                 if (File.Exists(file.CurrentPath))
                 {
@@ -489,12 +487,8 @@ namespace ProgramUpdater.Services
             {
                 try
                 {
-                    // Create directory for current path if it doesn't exist
-                    var currentDir = Path.GetDirectoryName(file.CurrentPath);
-                    if (!string.IsNullOrEmpty(currentDir))
-                    {
-                        Directory.CreateDirectory(currentDir);
-                    }
+                    // Create directory for current path if it doesn't exist using the cache
+                    EnsureDirectoryExists(file.CurrentPath);
 
                     // Delete the current (new) file if it exists
                     if (File.Exists(file.CurrentPath))
@@ -546,6 +540,7 @@ namespace ProgramUpdater.Services
             _cts = null;
             _fallbackClient?.Dispose();
             _fallbackClient = null;
+            _checkedDirectories.Clear();
         }
     }
 } 
