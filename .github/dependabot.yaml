@@ -12,10 +12,6 @@ updates:
     labels:
       - "dependencies"
       - "nuget"
-    commit-message:
-      prefix: "fix(deps)"
-      prefix-development: "chore(deps-dev)"
-      include: "scope"
     groups:
       nuget-dependencies:
         patterns:
@@ -33,6 +29,3 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
