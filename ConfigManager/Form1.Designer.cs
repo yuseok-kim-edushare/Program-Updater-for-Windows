@@ -34,93 +34,68 @@
         this.btnRemove = new System.Windows.Forms.Button();
         this.btnSave = new System.Windows.Forms.Button();
         this.btnLoad = new System.Windows.Forms.Button();
-        this.panel1 = new System.Windows.Forms.Panel();
         ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).BeginInit();
-        this.panel1.SuspendLayout();
         this.SuspendLayout();
         // 
         // dgvFiles
         // 
         this.dgvFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-        this.dgvFiles.Location = new System.Drawing.Point(12, 12);
-        this.dgvFiles.Name = "dgvFiles";
-        this.dgvFiles.Size = new System.Drawing.Size(1176, 397);
-        this.dgvFiles.TabIndex = 0;
         this.dgvFiles.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
         this.dgvFiles.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-        this.dgvFiles.RowHeadersWidth = 51;
-        // 
-        // panel1
-        // 
-        this.panel1.Controls.Add(this.btnLoad);
-        this.panel1.Controls.Add(this.btnSave);
-        this.panel1.Controls.Add(this.btnRemove);
-        this.panel1.Controls.Add(this.btnAdd);
-        this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-        this.panel1.Location = new System.Drawing.Point(0, 415);
-        this.panel1.Name = "panel1";
-        this.panel1.Size = new System.Drawing.Size(1176, 35);
-        this.panel1.TabIndex = 1;
+        this.dgvFiles.Location = new System.Drawing.Point(0, 0);
+        this.dgvFiles.Name = "dgvFiles";
+        this.dgvFiles.Size = new System.Drawing.Size(800, 400);
+        this.dgvFiles.TabIndex = 0;
         // 
         // btnAdd
         // 
-        this.btnAdd.Location = new System.Drawing.Point(12, 6);
+        this.btnAdd.Text = "Add";
         this.btnAdd.Name = "btnAdd";
         this.btnAdd.Size = new System.Drawing.Size(75, 23);
-        this.btnAdd.TabIndex = 0;
-        this.btnAdd.Text = "Add";
+        this.btnAdd.TabIndex = 1;
         this.btnAdd.UseVisualStyleBackColor = true;
         // 
         // btnRemove
         // 
-        this.btnRemove.Location = new System.Drawing.Point(93, 6);
+        this.btnRemove.Text = "Remove";
         this.btnRemove.Name = "btnRemove";
         this.btnRemove.Size = new System.Drawing.Size(75, 23);
-        this.btnRemove.TabIndex = 1;
-        this.btnRemove.Text = "Remove";
+        this.btnRemove.TabIndex = 2;
         this.btnRemove.UseVisualStyleBackColor = true;
         // 
         // btnSave
         // 
-        this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnSave.Location = new System.Drawing.Point(1000, 6);
+        this.btnSave.Text = "Save";
         this.btnSave.Name = "btnSave";
         this.btnSave.Size = new System.Drawing.Size(75, 23);
-        this.btnSave.TabIndex = 2;
-        this.btnSave.Text = "Save";
+        this.btnSave.TabIndex = 3;
         this.btnSave.UseVisualStyleBackColor = true;
         // 
         // btnLoad
         // 
-        this.btnLoad.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnLoad.Location = new System.Drawing.Point(1080, 6);
+        this.btnLoad.Text = "Load";
         this.btnLoad.Name = "btnLoad";
         this.btnLoad.Size = new System.Drawing.Size(75, 23);
-        this.btnLoad.TabIndex = 3;
-        this.btnLoad.Text = "Load";
+        this.btnLoad.TabIndex = 4;
         this.btnLoad.UseVisualStyleBackColor = true;
         // 
         // Form1
         // 
         this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.ClientSize = new System.Drawing.Size(1200, 750);
-        this.Controls.Add(this.panel1);
-        this.Controls.Add(this.dgvFiles);
+        this.ClientSize = new System.Drawing.Size(800, 450);
         this.Name = "Form1";
         this.Text = "Program Updater Configuration Manager";
         ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).EndInit();
-        this.panel1.ResumeLayout(false);
         this.ResumeLayout(false);
     }
 
         #endregion
 
         private System.Windows.Forms.DataGridView dgvFiles;
-        private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.Button btnLoad;
-        private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.Button btnRemove;
         private System.Windows.Forms.Button btnAdd;
+        private System.Windows.Forms.Button btnRemove;
+        private System.Windows.Forms.Button btnSave;
+        private System.Windows.Forms.Button btnLoad;
     }
 }
