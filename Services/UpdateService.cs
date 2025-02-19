@@ -154,6 +154,18 @@ namespace ProgramUpdater.Services
 
         private async Task<int> DownloadAndVerifyFile(FileConfiguration file, int currentStep, int totalSteps)
         {
+            // Pre-verify if current file exists and has correct hash
+            if (File.Exists(file.CurrentPath))
+            {
+                _progressCallback((currentStep++ * 100) / totalSteps, $"Pre-verifying {file.Name}...");
+                if (await VerifyFileHash(file.CurrentPath, file.ExpectedHash, _cts.Token))
+                {
+                    _logCallback($"File {file.Name} is already up to date, skipping download", LogLevel.Info);
+                    // Skip both download and verify steps to maintain progress
+                    currentStep += 2; // Skip both download and verify steps
+                    return currentStep;
+                }
+            }
 
             // Download new version
             _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
