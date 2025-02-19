@@ -94,6 +94,12 @@ To get file hash from Windows PowerShell:
 Get-FileHash -Path "C:\Program Files\YourApp\app.exe" -Algorithm SHA256
 ```
 
+### Config Manager
+
+The Config Manager is a Windows Forms application that allows you to manage the update configuration file.
+
+Detailed information about the Config Manager is available in the [ConfigManager/README.md](ConfigManager/README.md) file.
+
 ## Usage
 
 1. Run the updater:
