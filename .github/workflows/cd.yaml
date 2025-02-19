@@ -41,12 +41,14 @@ jobs:
       run: |
         dotnet publish updater.csproj --configuration Admin -f net48
         dotnet publish updater.csproj --configuration NonAdmin -f net48
-    
+        dotnet publish ConfigManager/ProgramUpdater.ConfigManager.csproj --configuration Debug -f net481
+
     - name: Compress updater.exe and .dll and settings.xml
       run: |
         mkdir ${{ github.workspace }}\release-files
         Compress-Archive -Path ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe, ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\Admin\net48\publish\*.dll, ${{ github.workspace }}\bin\Admin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-admin.zip
         Compress-Archive -Path ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe, ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\NonAdmin\net48\publish\*.dll, ${{ github.workspace }}\bin\NonAdmin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-nonadmin.zip
+        Compress-Archive -Path ${{ github.workspace }}\ConfigManager\bin\net481\publish\ProgramUpdater.ConfigManager.exe, ${{ github.workspace }}\ConfigManager\bin\net481\publish\ProgramUpdater.ConfigManager.exe.config, ${{ github.workspace }}\ConfigManager\bin\net481\publish\*.dll -DestinationPath ${{ github.workspace }}\release-files\updater-configmanager.zip
 
     
     - name: Get latest release version and Generate release notes

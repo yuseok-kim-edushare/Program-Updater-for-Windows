@@ -33,5 +33,6 @@ jobs:
     - name: Build solution for testing
       run: |
         dotnet build updater.csproj --configuration Debug
+        dotnet build ConfigManager/ProgramUpdater.ConfigManager.csproj --configuration Debug
 
     ## Todo: Create Test code and test running
