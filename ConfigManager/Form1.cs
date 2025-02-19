@@ -48,12 +48,22 @@ namespace ProgramUpdater.ConfigManager
             var jsonTab = new TabPage("JSON Configuration");
             
             // Create main panel for JSON tab
-            var jsonPanel = new Panel { Dock = DockStyle.Fill };
+            var jsonPanel = new Panel { 
+                Dock = DockStyle.Fill,
+                AllowDrop = true
+            };
             
             // Add DataGridView to the panel
             dgvFiles.Dock = DockStyle.Fill;
+            dgvFiles.AllowDrop = true;
             jsonPanel.Controls.Add(dgvFiles);
             
+            // Add drag and drop handlers
+            dgvFiles.DragEnter += DgvFiles_DragEnter;
+            dgvFiles.DragDrop += DgvFiles_DragDrop;
+            jsonPanel.DragEnter += DgvFiles_DragEnter;
+            jsonPanel.DragDrop += DgvFiles_DragDrop;
+
             // Create button panel for JSON tab
             var jsonButtonPanel = new Panel
             {
@@ -299,8 +309,10 @@ namespace ProgramUpdater.ConfigManager
 
         private void BtnAdd_Click(object sender, EventArgs e)
         {
-            _currentConfig.Files.Add(new FileConfiguration());
-            _bindingSource.ResetBindings(false);
+            if (_openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                AddNewFileConfiguration(_openFileDialog.FileName);
+            }
         }
 
         private void BtnRemove_Click(object sender, EventArgs e)
@@ -334,6 +346,51 @@ namespace ProgramUpdater.ConfigManager
         private void BtnLoad_Click(object sender, EventArgs e)
         {
             LoadConfiguration();
+        }
+
+        private void DgvFiles_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+            }
+        }
+
+        private void DgvFiles_DragDrop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                foreach (string filePath in files)
+                {
+                    AddNewFileConfiguration(filePath);
+                }
+            }
+        }
+
+        private void AddNewFileConfiguration(string filePath)
+        {
+            try
+            {
+                var fileConfig = new FileConfiguration
+                {
+                    CurrentPath = filePath,
+                    Name = Path.GetFileName(filePath),
+                    IsExecutable = Path.GetExtension(filePath).ToLower() == ".exe",
+                    BackupPath = Path.Combine(Path.GetDirectoryName(filePath), "backup", Path.GetFileName(filePath)),
+                    NewPath = Path.Combine(Path.GetDirectoryName(filePath), "new", Path.GetFileName(filePath))
+                };
+
+                // Update hash for the new file
+                _configService.UpdateFileHash(fileConfig);
+
+                _currentConfig.Files.Add(fileConfig);
+                _bindingSource.ResetBindings(false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error adding file {filePath}: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
