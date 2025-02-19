@@ -61,27 +61,11 @@ namespace ProgramUpdater.ConfigManager
                 DataPropertyName = "CurrentPath",
                 HeaderText = "Current Path"
             });
-            dgvFiles.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "NewPathSelect",
-                HeaderText = "",
-                Text = "...",
-                UseColumnTextForButtonValue = true,
-                Width = 30
-            });
             dgvFiles.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "NewPath",
                 DataPropertyName = "NewPath",
                 HeaderText = "New Path"
-            });
-            dgvFiles.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "BackupPathSelect",
-                HeaderText = "",
-                Text = "...",
-                UseColumnTextForButtonValue = true,
-                Width = 30
             });
             dgvFiles.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -120,9 +104,7 @@ namespace ProgramUpdater.ConfigManager
             var fileConfig = _currentConfig.Files[e.RowIndex];
             
             // Handle button column clicks
-            if (e.ColumnIndex == dgvFiles.Columns["CurrentPathSelect"].Index ||
-                e.ColumnIndex == dgvFiles.Columns["NewPathSelect"].Index ||
-                e.ColumnIndex == dgvFiles.Columns["BackupPathSelect"].Index)
+            if (e.ColumnIndex == dgvFiles.Columns["CurrentPathSelect"].Index )
             {
                 if (_openFileDialog.ShowDialog() == DialogResult.OK)
                 {
@@ -132,6 +114,9 @@ namespace ProgramUpdater.ConfigManager
                     {
                         fileConfig.CurrentPath = selectedPath;
                         fileConfig.Name = Path.GetFileName(selectedPath);
+                        fileConfig.IsExecutable = Path.GetExtension(selectedPath).ToLower() == ".exe";
+                        fileConfig.BackupPath = Path.Combine(Path.GetDirectoryName(selectedPath), "backup", fileConfig.Name);
+                        fileConfig.NewPath = Path.Combine(Path.GetDirectoryName(selectedPath), "new", fileConfig.Name);
                         // Update hash when current path is selected
                         _configService.UpdateFileHash(fileConfig);
                     }

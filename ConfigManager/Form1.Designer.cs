@@ -42,11 +42,13 @@
         // dgvFiles
         // 
         this.dgvFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-        this.dgvFiles.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
         this.dgvFiles.Location = new System.Drawing.Point(12, 12);
         this.dgvFiles.Name = "dgvFiles";
-        this.dgvFiles.Size = new System.Drawing.Size(776, 397);
+        this.dgvFiles.Size = new System.Drawing.Size(1176, 397);
         this.dgvFiles.TabIndex = 0;
+        this.dgvFiles.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+        this.dgvFiles.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+        this.dgvFiles.RowHeadersWidth = 51;
         // 
         // panel1
         // 
@@ -57,7 +59,7 @@
         this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
         this.panel1.Location = new System.Drawing.Point(0, 415);
         this.panel1.Name = "panel1";
-        this.panel1.Size = new System.Drawing.Size(800, 35);
+        this.panel1.Size = new System.Drawing.Size(1176, 35);
         this.panel1.TabIndex = 1;
         // 
         // btnAdd
@@ -81,7 +83,7 @@
         // btnSave
         // 
         this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnSave.Location = new System.Drawing.Point(632, 6);
+        this.btnSave.Location = new System.Drawing.Point(1000, 6);
         this.btnSave.Name = "btnSave";
         this.btnSave.Size = new System.Drawing.Size(75, 23);
         this.btnSave.TabIndex = 2;
@@ -91,7 +93,7 @@
         // btnLoad
         // 
         this.btnLoad.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnLoad.Location = new System.Drawing.Point(713, 6);
+        this.btnLoad.Location = new System.Drawing.Point(1080, 6);
         this.btnLoad.Name = "btnLoad";
         this.btnLoad.Size = new System.Drawing.Size(75, 23);
         this.btnLoad.TabIndex = 3;
@@ -102,7 +104,7 @@
         // 
         this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.ClientSize = new System.Drawing.Size(800, 450);
+        this.ClientSize = new System.Drawing.Size(1200, 750);
         this.Controls.Add(this.panel1);
         this.Controls.Add(this.dgvFiles);
         this.Name = "Form1";
