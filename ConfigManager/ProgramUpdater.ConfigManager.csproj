@@ -6,6 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>

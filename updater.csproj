@@ -6,6 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>8.0</LangVersion>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <StartupObject>ProgramUpdater.Program</StartupObject>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <!-- Enable binding redirects -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
