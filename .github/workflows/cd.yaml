@@ -39,8 +39,8 @@ jobs:
     
     - name: Build solution for release (without tests)
       run: |
-        dotnet publish updater.csproj --configuration Admin -f net48
-        dotnet publish updater.csproj --configuration NonAdmin -f net48
+        dotnet publish updater.csproj --configuration Admin -f net481
+        dotnet publish updater.csproj --configuration NonAdmin -f net481
         dotnet publish ConfigManager/ProgramUpdater.ConfigManager.csproj --configuration Release -f net481
 
     - name: Install ILRepack
@@ -48,9 +48,9 @@ jobs:
 
     - name: Repackaging dlls and exe into single exe file 1 (admin)
       run: |
-        $buildPath = "${{ github.workspace }}\bin\Admin\net48\publish"
+        $buildPath = "${{ github.workspace }}\bin\Admin\net481\publish"
         $outputPath = "${{ github.workspace }}\release-files\updater-admin.exe"
-        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\updater.exe `
+        ilrepack /target:winexe /targetplatform:"v4,C:\Windows\Microsoft.NET\Framework\v4.0.30319" /internalize /union /out:$outputPath $buildPath\updater.exe `
         $buildPath\Microsoft.Bcl.AsyncInterfaces.dll `
         $buildPath\Microsoft.Extensions.Configuration.Abstractions.dll `
         $buildPath\Microsoft.Extensions.DependencyInjection.Abstractions.dll `
@@ -71,9 +71,9 @@ jobs:
 
     - name: Repackaging dlls and exe into single exe file 2 (nonadmin)
       run: |
-        $buildPath = "${{ github.workspace }}\bin\NonAdmin\net48\publish"
+        $buildPath = "${{ github.workspace }}\bin\NonAdmin\net481\publish"
         $outputPath = "${{ github.workspace }}\release-files\updater-nonadmin.exe"
-        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\updater.exe `
+        ilrepack /target:winexe /targetplatform:"v4,C:\Windows\Microsoft.NET\Framework\v4.0.30319" /internalize /union /out:$outputPath $buildPath\updater.exe `
         $buildPath\Microsoft.Bcl.AsyncInterfaces.dll `
         $buildPath\Microsoft.Extensions.Configuration.Abstractions.dll `
         $buildPath\Microsoft.Extensions.DependencyInjection.Abstractions.dll `
@@ -96,7 +96,7 @@ jobs:
       run: |
         $buildPath = "${{ github.workspace }}\ConfigManager\bin\Release\net481\publish"
         $outputPath = "${{ github.workspace }}\release-files\updater-configmanager.exe"
-        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\ProgramUpdater.ConfigManager.exe $buildPath\Newtonsoft.Json.dll
+        ilrepack /target:winexe /targetplatform:"v4,C:\Windows\Microsoft.NET\Framework64\v4.0.30319" /internalize /union /out:$outputPath $buildPath\ProgramUpdater.ConfigManager.exe $buildPath\Newtonsoft.Json.dll
     
     - name: Get latest release version and Generate release notes
       id: get_latest_release
