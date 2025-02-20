@@ -6,9 +6,17 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-
+  <PropertyGroup>
+    <Company>Your Company Name</Company>
+    <Product>Updater Confing Manger</Product>
+    <Description>Confing File Managing Application for Updater Tool</Description>
+    <Copyright>Copyright © 2025</Copyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
