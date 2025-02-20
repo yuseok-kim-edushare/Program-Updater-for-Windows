@@ -43,13 +43,60 @@ jobs:
         dotnet publish updater.csproj --configuration NonAdmin -f net48
         dotnet publish ConfigManager/ProgramUpdater.ConfigManager.csproj --configuration Release -f net481
 
-    - name: Compress updater.exe and .dll and settings.xml
-      run: |
-        mkdir ${{ github.workspace }}\release-files
-        Compress-Archive -Path ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe, ${{ github.workspace }}\bin\Admin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\Admin\net48\publish\*.dll, ${{ github.workspace }}\bin\Admin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-admin.zip
-        Compress-Archive -Path ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe, ${{ github.workspace }}\bin\NonAdmin\net48\publish\updater.exe.config, ${{ github.workspace }}\bin\NonAdmin\net48\publish\*.dll, ${{ github.workspace }}\bin\NonAdmin\net48\publish\settings.xml -DestinationPath ${{ github.workspace }}\release-files\updater-nonadmin.zip
-        Compress-Archive -Path ${{ github.workspace }}\ConfigManager\bin\Release\net481\publish\ProgramUpdater.ConfigManager.exe, ${{ github.workspace }}\ConfigManager\bin\Release\net481\publish\*.dll -DestinationPath ${{ github.workspace }}\release-files\updater-configmanager.zip
+    - name: Install ILRepack
+      run: dotnet tool install -g dotnet-ilrepack
 
+    - name: Repackaging dlls and exe into single exe file 1 (admin)
+      run: |
+        $buildPath = "${{ github.workspace }}\bin\Admin\net48\publish"
+        $outputPath = "${{ github.workspace }}\release-files\updater-admin.exe"
+        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\updater.exe `
+        $buildPath\Microsoft.Bcl.AsyncInterfaces.dll `
+        $buildPath\Microsoft.Extensions.Configuration.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.DependencyInjection.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.DependencyInjection.dll `
+        $buildPath\Microsoft.Extensions.Http.dll `
+        $buildPath\Microsoft.Extensions.Logging.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.Logging.dll `
+        $buildPath\Microsoft.Extensions.Options.dll `
+        $buildPath\Microsoft.Extensions.Primitives.dll `
+        $buildPath\Newtonsoft.Json.dll `
+        $buildPath\System.Buffers.dll `
+        $buildPath\System.Diagnostics.DiagnosticSource.dll `
+        $buildPath\System.Memory.dll `
+        $buildPath\System.Numerics.Vectors.dll `
+        $buildPath\System.Runtime.CompilerServices.Unsafe.dll `
+        $buildPath\System.Threading.Tasks.Extensions.dll `
+        $buildPath\System.ValueTuple.dll
+
+    - name: Repackaging dlls and exe into single exe file 2 (nonadmin)
+      run: |
+        $buildPath = "${{ github.workspace }}\bin\NonAdmin\net48\publish"
+        $outputPath = "${{ github.workspace }}\release-files\updater-nonadmin.exe"
+        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\updater.exe `
+        $buildPath\Microsoft.Bcl.AsyncInterfaces.dll `
+        $buildPath\Microsoft.Extensions.Configuration.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.DependencyInjection.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.DependencyInjection.dll `
+        $buildPath\Microsoft.Extensions.Http.dll `
+        $buildPath\Microsoft.Extensions.Logging.Abstractions.dll `
+        $buildPath\Microsoft.Extensions.Logging.dll `
+        $buildPath\Microsoft.Extensions.Options.dll `
+        $buildPath\Microsoft.Extensions.Primitives.dll `
+        $buildPath\Newtonsoft.Json.dll `
+        $buildPath\System.Buffers.dll `
+        $buildPath\System.Diagnostics.DiagnosticSource.dll `
+        $buildPath\System.Memory.dll `
+        $buildPath\System.Numerics.Vectors.dll `
+        $buildPath\System.Runtime.CompilerServices.Unsafe.dll `
+        $buildPath\System.Threading.Tasks.Extensions.dll `
+        $buildPath\System.ValueTuple.dll
+
+    - name: Repackaging dlls and exe into single exe file 3 (config manager)
+      run: |
+        $buildPath = "${{ github.workspace }}\ConfigManager\bin\Release\net481\publish"
+        $outputPath = "${{ github.workspace }}\release-files\updater-configmanager.exe"
+        ilrepack /target:winexe /targetplatform:v4 /internalize /union /out:$outputPath $buildPath\ProgramUpdater.ConfigManager.exe $buildPath\Newtonsoft.Json.dll
     
     - name: Get latest release version and Generate release notes
       id: get_latest_release
@@ -88,8 +135,11 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ${{ github.workspace }}\release-files\updater-admin.zip
-          ${{ github.workspace }}\release-files\updater-nonadmin.zip
+          ${{ github.workspace }}\release-files\updater-admin.exe
+          ${{ github.workspace }}\release-files\updater-nonadmin.exe
+          ${{ github.workspace }}\release-files\updater-configmanager.exe
+          ${{ github.workspace }}\example.json
+          ${{ github.workspace }}\settings.xml
         tag_name: ${{ env.new_release }}
         name: ${{ env.new_release }}
         body: ${{ env.release_notes }}
