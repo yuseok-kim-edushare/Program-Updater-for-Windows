@@ -78,15 +78,33 @@ namespace ProgramUpdater.Services
                 // Stop running executables
                 await StopRunningExecutables(config.Files);
 
-                // First phase: Download and verify all files
+                // Create a list to store files that need updating
+                var filesToUpdate = new List<FileConfiguration>();
+
+                // First phase: Download and verify all files, tracking which ones need updates
                 foreach (var file in config.Files)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
+                    
+                    // Check if file needs updating
+                    if (File.Exists(file.CurrentPath))
+                    {
+                        _progressCallback((currentStep++ * 100) / totalSteps, $"Pre-verifying {file.Name}...");
+                        if (await VerifyFileHash(file.CurrentPath, file.ExpectedHash, _cts.Token))
+                        {
+                            _logCallback($"File {file.Name} is already up to date, skipping update", LogLevel.Info);
+                            currentStep += 3; // Skip both download, verify, and replace steps
+                            continue; // Skip this file entirely
+                        }
+                    }
+
+                    // File needs updating, add it to our list and process it
+                    filesToUpdate.Add(file);
                     currentStep = await DownloadAndVerifyFile(file, currentStep, totalSteps);
                 }
                 
-                // Second phase: Backup and replace all files
-                foreach (var file in config.Files)
+                // Second phase: Backup and replace only files that need updating
+                foreach (var file in filesToUpdate)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
                     currentStep = await BackupAndReplaceFile(file, currentStep, totalSteps);
@@ -154,19 +172,6 @@ namespace ProgramUpdater.Services
 
         private async Task<int> DownloadAndVerifyFile(FileConfiguration file, int currentStep, int totalSteps)
         {
-            // Pre-verify if current file exists and has correct hash
-            if (File.Exists(file.CurrentPath))
-            {
-                _progressCallback((currentStep++ * 100) / totalSteps, $"Pre-verifying {file.Name}...");
-                if (await VerifyFileHash(file.CurrentPath, file.ExpectedHash, _cts.Token))
-                {
-                    _logCallback($"File {file.Name} is already up to date, skipping download", LogLevel.Info);
-                    // Skip both download and verify steps to maintain progress
-                    currentStep += 2; // Skip both download and verify steps
-                    return currentStep;
-                }
-            }
-
             // Download new version
             _progressCallback((currentStep++ * 100) / totalSteps, $"Downloading {file.Name}...");
             await DownloadFile(file.DownloadUrl, file.NewPath, _cts.Token);
