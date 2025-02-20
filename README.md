@@ -120,7 +120,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Built with .NET Framework 4.8
+- Built with .NET Framework 4.8.1
 - Uses Newtonsoft.Json for JSON parsing
 - Inspired by the need for a lightweight, open-source program updater
 
