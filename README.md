@@ -16,9 +16,12 @@ A lightweight, open-source program updater for Windows applications built with .
 
 ## Requirements
 
-- Windows 7 or later
-- .NET Framework 4.8 or later
-- (For Development) Visual Studio 2019+
+- Windows 10 20H2 or Later (server 2022 or later)
+  - .NET Framework 4.8.1
+- Not Ensured, but it should work with .NET 4.8 and windows 7 or later
+  - MS introduce no comapatibility change from .NET 4.8 to .NET 4.8.1
+    - then, it should work with .NET 4.8 and windows 7 or later
+- (For Development) Visual Studio 2022+
   - or .NET 8+ SDK for using dotnet build command
 
 ## Building the Project
