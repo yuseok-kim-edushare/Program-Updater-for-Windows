@@ -64,7 +64,13 @@ Create a `settings.xml` file in the same directory as the executable to customiz
 
 The settings.xml file allows you to:
 - Customize the window title and update message
-- Specify the update configuration file location (HTTP, HTTPS, FTP, or FTPS)
+- Specify the update configuration file location (supports local files, HTTP, HTTPS, FTP, or FTPS)
+
+For the ConfigurationFilePath, you can use any of these formats:
+- Local file path: `C:\path\to\update_config.json`
+- File protocol: `file:///C:/path/to/update_config.json`
+- HTTP/HTTPS: `https://your-server.com/update_config.json`
+- FTP/FTPS: `ftp://your-server.com/update_config.json`
 
 ### Update Configuration (JSON)
 
@@ -85,12 +91,15 @@ Create a configuration file (update_config.json) with your update details:
 }
 ```
 
-The configuration file can be hosted on HTTP, HTTPS, or FTP:
-```
-ftp://your-server.com/path/to/update_config.json
-or
-ftp://username:password@your-server.com/updates/app.exe
-```
+The configuration file can be hosted:
+- Locally on your machine
+- On a web server via HTTP/HTTPS
+- On an FTP server:
+  ```
+  ftp://your-server.com/path/to/update_config.json
+  or
+  ftp://username:password@your-server.com/updates/app.exe
+  ```
 
 To get file hash from Windows PowerShell:
 ```PowerShell
