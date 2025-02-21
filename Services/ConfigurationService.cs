@@ -71,37 +71,63 @@ namespace ProgramUpdater.Services
                 throw new ArgumentException("설정 URL이 비어 있거나 null입니다");
             }
 
-            Uri uri;
-            try
-            {
-                uri = new Uri(configUrl);
-            }
-            catch (UriFormatException ex)
-            {
-                throw new ArgumentException($"잘못된 URL 형식: {configUrl}", ex);
-            }
-
             string jsonContent;
-            try
+
+            // Check if it's a local file path
+            if (File.Exists(configUrl))
             {
-                switch (uri.Scheme.ToLower())
+                try
                 {
-                    case "http":
-                    case "https":
-                        jsonContent = await DownloadConfigViaHttp(uri).ConfigureAwait(false);
-                        break;
-                    case "ftp":
-                    case "ftps":
-                        jsonContent = await DownloadConfigViaFtp(uri).ConfigureAwait(false);
-                        break;
-                    default:
-                        throw new ArgumentException($"지원되지 않는 프로토콜: {uri.Scheme}. HTTP, HTTPS, FTP, FTPS만 지원됩니다.");
+                    jsonContent = File.ReadAllText(configUrl);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"로컬 설정 파일 읽기 실패: {ex.Message}", ex);
                 }
             }
-            catch (Exception ex) when (ex is HttpRequestException || ex is WebException || ex is TaskCanceledException)
+            else
             {
-                var errorMessage = GetDetailedErrorMessage(ex);
-                throw new InvalidOperationException($"설정 파일 다운로드 실패: {errorMessage}", ex);
+                Uri uri;
+                try
+                {
+                    uri = new Uri(configUrl);
+                }
+                catch (UriFormatException ex)
+                {
+                    throw new ArgumentException($"잘못된 URL 형식 또는 파일을 찾을 수 없음: {configUrl}", ex);
+                }
+
+                try
+                {
+                    switch (uri.Scheme.ToLower())
+                    {
+                        case "http":
+                        case "https":
+                            jsonContent = await DownloadConfigViaHttp(uri).ConfigureAwait(false);
+                            break;
+                        case "ftp":
+                        case "ftps":
+                            jsonContent = await DownloadConfigViaFtp(uri).ConfigureAwait(false);
+                            break;
+                        case "file":
+                            if (File.Exists(uri.LocalPath))
+                            {
+                                jsonContent = File.ReadAllText(uri.LocalPath);
+                            }
+                            else
+                            {
+                                throw new FileNotFoundException($"로컬 설정 파일을 찾을 수 없음: {uri.LocalPath}");
+                            }
+                            break;
+                        default:
+                            throw new ArgumentException($"지원되지 않는 프로토콜: {uri.Scheme}. HTTP, HTTPS, FTP, FTPS, FILE 또는 로컬 파일 경로만 지원됩니다.");
+                    }
+                }
+                catch (Exception ex) when (ex is HttpRequestException || ex is WebException || ex is TaskCanceledException)
+                {
+                    var errorMessage = GetDetailedErrorMessage(ex);
+                    throw new InvalidOperationException($"설정 파일 다운로드 실패: {errorMessage}", ex);
+                }
             }
 
             if (string.IsNullOrEmpty(jsonContent))
