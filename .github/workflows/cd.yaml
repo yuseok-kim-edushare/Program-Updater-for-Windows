@@ -1,10 +1,8 @@
 name: Continuous Deployment
 on:
-  workflow_run:
-    workflows: ["CI tests"]
-    types:
-      - completed
-    # Remove the branches filter from here
+  push:
+    branches:
+      - main # main 브랜치로의 모든 push 이벤트 (PR 병합 포함) 에 실행
 
 permissions:
   contents: write
@@ -12,8 +10,6 @@ permissions:
 
 jobs:
   deploy:
-    # Update the condition to check both success and target branch
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: windows-2022
 
     steps:
