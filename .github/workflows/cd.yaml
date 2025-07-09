@@ -4,7 +4,7 @@ on:
     workflows: ["CI tests"]
     types:
       - completed
-    branches: [ "main" ]
+    # Remove the branches filter from here
 
 permissions:
   contents: write
@@ -12,8 +12,8 @@ permissions:
 
 jobs:
   deploy:
-    # Only run if CI workflow was successful
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Update the condition to check both success and target branch
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: windows-2022
 
     steps:
