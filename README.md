@@ -16,9 +16,9 @@ A lightweight, open-source program updater for Windows applications built with .
 
 ## Requirements
 
-- Windows 10 20H2 or Later (server 2022 or later)
+- Windows 10 20H2 or Later (server 2022 or later) (for using release artifacts)
   - .NET Framework 4.8.1
-- Not Ensured, but it should work with .NET 4.8 and windows 7 or later
+- Not Ensured, but it should work with .NET 4.8 and windows 7 or later (also you can self build targe framework with net48)
   - MS introduce no comapatibility change from .NET 4.8 to .NET 4.8.1
     - then, it should work with .NET 4.8 and windows 7 or later
 - (For Development) Visual Studio 2022+
@@ -35,8 +35,8 @@ git clone https://github.com/YOUR_USERNAME/Program_updater_for_win.git
 
 3. Build the solution:
 ```bash
-dotnet build --configuration Admin
-dotnet build --configuration NonAdmin
+dotnet build --configuration Admin -f net481
+dotnet build --configuration NonAdmin -f net481
 ```
 - If you need to exe requires admin privileges, you need to build the project with the Admin configuration.
   - like update program in C:\Program Files\YourApp\
