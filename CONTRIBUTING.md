@@ -11,13 +11,13 @@ We love your input! We want to make contributing to Program Updater for Windows 
 ## We Develop with Github
 We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
 
-## We Use [Github Actions](https://docs.github.com/ko/actions)
+## We Use [Github Actions](https://docs.github.com/en/actions)
 Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
 1. Fork the repo and create your branch from `main`.
 2. If you've added code that should be tested, add tests.
 3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
+4. Ensure the test suite passes. (now we only check build success, so we need to implement myabe?)
 5. Make sure your code follows the existing style.
 6. Issue that pull request!
 
