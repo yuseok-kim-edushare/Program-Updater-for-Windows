@@ -17,7 +17,7 @@ jobs:
       contents: write    # (선택 사항) 필요한 경우
     steps:
       - name: Enable auto-merge
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo, pull_number } = context.issue;
